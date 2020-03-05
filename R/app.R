@@ -17,7 +17,6 @@ p_load('shinycssloaders')
 p_load("shinyalert")
 p_load('shinyFiles')
 p_load("shinyWidgets")
-p_load("shinycssloaders")
 p_load("shinyBS")
 
 # Load data
@@ -51,7 +50,7 @@ p_load("janitor")
 #p_load(broom)
 
 # Analysis logic
-p_load("sva")
+#p_load("sva")
 p_load("imputeLCMD")
 p_load("modelr")
 p_load("limma")
