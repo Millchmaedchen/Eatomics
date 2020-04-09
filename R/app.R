@@ -34,7 +34,7 @@ p_load("ggplot2")
 p_load("gridExtra")
 p_load("ggthemes")
 #install_github("vqv/ggbiplot")
-#library(ggbiplot)
+library(ggbiplot)
 #p_load("ggiraph")
 p_load("autoplotly")
 #p_load("EnhancedVolcano")
@@ -141,11 +141,7 @@ ui <- fluidPage(
                                                        plotOutput("pca_input_samples", height = 800),
                                                        downloadButton('downloadpca', 'Save')
                                               ),
-                                              tabPanel(title = "Low abundance transcription factors",
-                                                       uiOutput("HighlightSample"),
-                                                       plotOutput("TSdetection",height = 800) ,
-                                                       downloadButton('downloadTSdetection', 'Save')
-                                              ),
+
                                               tabPanel(title = "Distribution overview",
                                                        plotOutput("distributionPlot",height = 800) ,
                                                        downloadButton('downloadDistributionPlot', 'Save')
@@ -282,7 +278,7 @@ server <- function(input, output, session) {
     input$analyze
     data<- data()
     reportBlocks$linesFromMaxQuant = nrow(data)
-      isolate(selectProteinData(data, QuantMethod = input$insty))
+      isolate(selectProteinData(data, intensityMetric = input$insty))
     
   })
   
@@ -467,7 +463,7 @@ server <- function(input, output, session) {
         ellipse = FALSE
       }
       
-      biplot <- ggbiplot(cc, choices = as.numeric(input$PCs), 
+      biplot <- ggbiplot::ggbiplot(cc, choices = as.numeric(input$PCs), 
                          var.scale=1, 
                          obs.scale=1, 
                          var.axes=F, 
@@ -545,35 +541,7 @@ server <- function(input, output, session) {
         print(distributionPlot_input())
         dev.off()
       })
-    
-    #Detection of low abundance transcription factors
-    TSdetect_input <- reactive({
-      plot_TSdetection(filtpro(), HighlightedSample = input$HighlightSample)
-    })
-    
-    output$TSdetection <- renderPlot({
-      QCreport$TSdetect<-TSdetect_input()
-      TSdetect_input()
-    })
-    
-    output$downloadTSdetection <- downloadHandler(
-      filename = "TSdetection.pdf",
-      content = function(file) {
-        pdf(file)
-        print(QCreport$TSdetect)
-        dev.off()
-      })
-    
-    ### Enable to highlight reference sample for low abundance TF plot
-    output$HighlightSample <- renderUI({
-      insty<-insty()
-      selectizeInput("HighlightSample",
-                     label = "Select a sample to highlight",
-                     choices = colnames(insty),
-                     selected = NULL
-      )
-      
-    })
+
     
     #Protein coverage plot
     numbers_input <- reactive({

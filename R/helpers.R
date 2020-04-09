@@ -143,3 +143,133 @@ matchedExpDesign <- function(expDesign, proteinAbundance){
   matchedExpDesign = matchedExpDesign %>% column_to_rownames("PatientID")
   return(matchedExpDesign)
 }
+
+# Plots
+
+#' Distribution overview - Creates a sample-wise boxplot of log2-transformed intensity distribution.
+#' @param proteinAbundance 
+#' @return
+#' @export
+
+plot_distribution <- function (proteinAbundance) {
+  proteinAbundance <- proteinAbundance %>% gather(key = "PatientID", value = "Abundance")
+  ggplot(proteinAbundance, aes(x = PatientID, y = Abundance)) + 
+    geom_boxplot(notch = TRUE, na.rm = TRUE) +
+    coord_flip() +
+    labs(x = "SampleID", y = "Log2-transformed intensity") +
+    guides(fill=FALSE) +
+    theme_light() +
+    scale_color_tableau() 
+}
+
+
+#' Protein Coverage - Creates a plot of sample-wise quantified protein coverage. 
+#' @param proteinAbundance 
+#' @return
+#' @export
+
+plot_proteinCoverage<-function (proteinAbundance) {
+  proteinAbundance <- proteinAbundance %>% gather(key = "SampleID", value = "Number of proteins") %>% group_by(SampleID) %>% summarise_all(list(~sum(!is.na(.))))
+  ggplot(proteinAbundance, aes(x= SampleID, y= `Number of proteins`)) +
+    geom_col() +
+    labs(title = "Measured proteins per sample", x = "", y = "Number of proteins") + 
+    guides(fill=FALSE) +
+    theme_light() +
+    scale_color_tableau() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+}
+
+#' Sample-to-sample heatmap  - Creates a heatmap of sample-to-sample distances based either on correlation coefficient or 
+#' euclidean distance
+#' @param proteinAbundnace 
+#' @param corr A logical stating if the pairwise complete correlation coefficient should be used (= TRUE) or if the Euclidean 
+#' distance is used (= FALSE, default)
+#'
+#' @return
+#' @export
+#' 
+plot_StS_heatmap <- function(proteinAbundnace, corr = FALSE){
+  if (corr == TRUE) {
+    sampleDists = cor(proteinAbundnace, use = "pairwise.complete.obs")
+  } else {
+    sampleDists <- dist(t(proteinAbundnace), method = "euclidean")
+  }
+  sampleDistMatrix <- as.matrix( sampleDists )
+  colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+  pheatmap(sampleDistMatrix,
+           col = colors,
+           main= "Sample to Sample Heatmap",
+           legend=TRUE,
+           fontsize_row = 8,
+           fontsize_col= 8)
+}
+
+
+## Replace missing values from a shifted Gaussian distribution in a perseus-like fashion. 
+#Author of this function: Matthias Ziehm, Matthias.Ziehm@mdc-berlin.de
+
+#requires data in log space, with missing values either as -Inf or NA
+#if rowMaximumLimit=T, requires minimum 1 valid value per row
+replaceMissingFromGaussian = function(data, width=0.3, shift=1.8, separateColumns=T, rowMaximumLimit=F){
+  data=apply(data,2, function(x){
+    x[is.infinite(x)]=0/0
+    return(x)
+  }) #substitute +-Inf with NA, which will then be substituted by values from normal distribution
+  
+  if(rowMaximumLimit==FALSE){
+    if(separateColumns==TRUE){
+      data=apply(data,2, function(x){
+        tempSD=sd(x,na.rm=T)
+        x[is.na(x)]=rnorm(length(x[is.na(x)]),mean(x,na.rm=T)-shift*tempSD, width*tempSD)
+        return(x)
+      })
+    }
+    else{ #WholeMatrix
+      tempSD=sd(unlist(data),na.rm=T)
+      data[is.na(data)]=rnorm(length(data[is.na(data)]), mean(unlist(data),na.rm=T)-shift*tempSD, width*tempSD)
+    }
+  }
+  else{ #RowMaximumLimit, i.e. imputed values larger than max measured are rejected
+    rowmax=apply(data,1,max,na.rm=T)
+    if(sum(is.infinite(rowmax))>0){
+      stop("Error: data contains rows with no valid values!")
+    }
+    if(separateColumns==TRUE){
+      data=apply(data,2, function(x){
+        tempSD=sd(x,na.rm=T)
+        imputes=rnorm(length(x[is.na(x)]),mean(x,na.rm=T)-shift*tempSD, width*tempSD)
+        impBool=imputes>rowmax[is.na(x)]
+        #cat(length(impBool))
+        shift2=shift*1.05
+        while(sum(impBool)>0){
+          #cat(sum(impBool)," ")
+          imputes[impBool]=rnorm(sum(impBool),mean(x,na.rm=T)-shift2*tempSD, width*tempSD)
+          impBool=imputes>rowmax[is.na(x)]
+          shift2=shift2*1.05
+        }
+        x[is.na(x)]=imputes
+        return(x)
+      })
+    }
+    else{ #WholeMatrix
+      tempSD=sd(unlist(data),na.rm=T)
+      data=apply(data,2, function(x){ #calculate columnwise here to enable row max check, but using mean and SD of whole table
+        imputes=rnorm(length(x[is.na(x)]),mean(unlist(data),na.rm=T)-shift*tempSD, width*tempSD)
+        impBool=imputes>rowmax[is.na(x)]
+        #cat(length(impBool))
+        shift2=shift*1.05
+        while(sum(impBool)>0){
+          #cat(sum(impBool)," ")
+          imputes[impBool]=rnorm(sum(impBool),mean(unlist(data),na.rm=T)-shift2*tempSD, width*tempSD)
+          impBool=imputes>rowmax[is.na(x)]
+          shift2=shift2*1.05
+        }
+        x[is.na(x)]=imputes
+        return(x)
+      })
+    }
+  }
+  return(data)
+}
+
+
