@@ -38,7 +38,7 @@ library(ggbiplot)
 #p_load("ggiraph")
 p_load("autoplotly")
 #p_load("EnhancedVolcano")
-#p_load(kableExtra)
+p_load(kableExtra)
 p_load("ggrepel")
 p_load("gtools")
 
@@ -185,6 +185,67 @@ ui <- fluidPage(
                         )   
                         )
                       )
+             ),
+             tabPanel("Differential Expression",
+                      #actionBttn("tour_limma", icon("info"),color = "success",style = "material-circle",size = "xs"
+                      #),
+                      sidebarLayout(       
+                        sidebarPanel(
+                          uiOutput("conditional_grouping_limma"),
+                          uiOutput("conditional_subselectGR_limma"),
+                          checkboxInput("ContinChoice", "Use continuous response instead of grouping", FALSE),
+                          checkboxInput("imputeForLimma", "Impute missing values", FALSE),
+                          #checkboxInput("remove_sv", "Remove surrogate variables", FALSE),
+                          checkboxInput("includeCovariates", "Include parameters as covariates", FALSE), 
+                          conditionalPanel("input.includeCovariates == TRUE",
+                                           uiOutput("covariatesChoice")),
+                          checkboxInput("expandFilter", "Stratification and filter",  FALSE),
+                          conditionalPanel("input.expandFilter == TRUE",
+                                           uiOutput("filter_group_limma")),
+                          conditionalPanel("input.expandFilter == TRUE",
+                                           uiOutput("filter_level_limma")),
+                          conditionalPanel("input.expandFilter == TRUE",
+                                           uiOutput("selectContrast")),
+                          actionButton("analyzeLimma","Analyze",class = "btn-primary")
+                          
+                        ),
+                        
+                        mainPanel(
+                          fluidRow(
+                            column(8,
+                                   plotlyOutput("limma"
+                                                ,height = 500
+                                   ) %>% withSpinner()
+                            ),
+                            
+                            absolutePanel(
+                              top=5,
+                              right = 20,
+                              draggable = TRUE,
+                              wellPanel(
+                                #sidebarPanel(position = "right",
+                                numericInput("adj.P.Val", "Adjusted P value threshold", 0.05, min = 0, max = 1, step= 0.01),
+                                sliderInput("logFC", "Log Fold Change", 0, min = 0, max = 10, step = 0.1)
+                              )
+                            ),
+                            br(),
+                            column(12,
+                                   DT::dataTableOutput('up'),
+                                   DT::dataTableOutput('down'),
+                                   br(),
+                                   uiOutput("labelColBox"),
+                                   checkboxInput("showLabels", "Blend in PatientID", FALSE),
+                                   plotOutput("boxPlotUp"),
+                                   plotOutput("boxPlotDown"),
+                                   htmlOutput("doc1")
+                            )),
+                          
+                          br(),
+                          downloadButton("report", "Generate report"),
+                          downloadButton("reportDataDL", "Download report data")
+                        )
+                      )
+                      
              ),
 
              
@@ -871,7 +932,7 @@ server <- function(input, output, session) {
     covariates = input$covariates#, TODO: Set up instead of filter for example
     covariates = make_clean_names(covariates)
     
-    ClinData = ClinDomit$data %>% clean_names() %>% dplyr::select(patient_id, mainParameter, covariates) %>% remove_missing() 
+    ClinData = ClinDomit$data %>% clean_names() %>% dplyr::select(patient_id, all_of(mainParameter), all_of(covariates)) %>% remove_missing() 
     ClinColClasses = lapply(ClinData, class)
     if (input$ContinChoice == FALSE & ClinColClasses[mainParameter]=='numeric') {
       ClinData = ClinData %>% 
@@ -980,15 +1041,15 @@ server <- function(input, output, session) {
     gene_list$threshold = as.factor(abs(gene_list$logFC) > input$logFC & gene_list$adj.P.Val < input$adj.P.Val)
     
     #TODO: implement title of volcano plot either reactive to current experimental setup or 
-    # make title as genereic as "volcano plot" and refer to experimental setup panel for forther information
+    # make title as genereic as "volcano plot" and refer to experimental setup panel for further information
     
-    if (!is.null(input$expandFilter) && input$expandFilter == TRUE) {
-      Filnames = paste(" only ", input$filter_levels[1], collapse= "")
-    } else {
-      Filnames = ""
-    }
+    # if (!is.null(input$expandFilter) && input$expandFilter == TRUE) {
+    #   Filnames = paste(" only ", input$filter_levels[1], collapse= "")
+    # } else {
+    #   Filnames = ""
+    # }
+    
     Factor = input$GR_fatcor
-    
     
     reportBlocks$volcano_plot = 
       ggplot(data=gene_list, aes(x=logFC, y=-log10(P.Value) , colour=threshold)) +
@@ -999,13 +1060,20 @@ server <- function(input, output, session) {
       scale_color_tableau() +
       theme_light() +
       theme(legend.title = element_blank())
-    if (input$ContinChoice == FALSE){
-      reportBlocks$volcano_plot = reportBlocks$volcano_plot +
-        ggtitle(paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2]), Filnames, collapse = ""))
-    } else {
-      reportBlocks$volcano_plot = reportBlocks$volcano_plot +
-        ggtitle(paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = ""))
-    }
+    # if (input$ContinChoice == FALSE){
+    #   reportBlocks$volcano_plot = reportBlocks$volcano_plot +
+    #     ggtitle(label = "Volcano plot",
+    #          subtitle = paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")#,
+    #          #caption = paste(names(ClinDomit$designMatrix)[1], 
+    #         #                 " regulated when compared to ", 
+    #         #                 names(ClinDomit$designMatrix[2]), 
+    #         #                 Filnames, collapse = "")
+    #          )
+    #    # ggtitle(paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2]), Filnames, collapse = ""))
+    # } else {
+    #   reportBlocks$volcano_plot = reportBlocks$volcano_plot 
+    # 
+    # }
     
   })
   
@@ -1032,9 +1100,50 @@ server <- function(input, output, session) {
     
     reportBlocks$volcano_plot<-limma_input()
     
+    #Prepare interactive plot, reactive title and legend
+
+    #TODO: implement title of volcano plot either reactive to current experimental setup or 
+    # make title as genereic as "volcano plot" and refer to experimental setup panel for further information
     
-    legendtitle <- list(yref='paper',xref="paper",y=1,x=1.16, text=paste("Threshold: \n adj.p < ", input$adj.P.Val, " \n and \n log2FC +/- ", input$logFC),showarrow=F)
-    pp<-ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% layout( legend=list(y=0.8, yanchor="top"),annotations=legendtitle ) 
+    if (!is.null(input$expandFilter) && input$expandFilter == TRUE) {
+      Filnames = paste(" only ", input$filter_levels[1], collapse= "")
+    } else {
+      Filnames = ""
+    }
+    
+    input$analyzeLimma 
+    isolate(
+    if (input$ContinChoice == FALSE){
+      title_begin = paste(names(ClinDomit$designMatrix)[1], 
+                                           " regulated when compared to ", 
+                                           names(ClinDomit$designMatrix[2]), 
+                                           Filnames, collapse = "")
+    } else {
+      title_begin =  paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
+    })
+    # legendtitle <- list(yref='paper', xref="container", y = 1, x = 1.16, 
+    #                     text = paste("Threshold: \n adj.p < ", 
+    #                                  input$adj.P.Val, " \n and \n log2FC +/- ", input$logFC), showarrow=F)
+    pp <- ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
+      plotly::layout(
+        legend = list(title = list(text = paste("Threshold: \n adj.p < ", 
+                                                input$adj.P.Val, 
+                                                " \n and \n log2FC +/- ", 
+                                                input$logFC)#, 
+                                   #side = "top left"
+                                   )), #annotations = legendtitle, 
+        title = list(text = paste0('Volcano plot',
+                                   '<br>',
+                                   '<sup>',
+                                   title_begin,
+                                   collapse = "",
+                                   '</sup>'), 
+                     yref = "container", 
+                     yanchor = "bottom",
+                     pad = list(b = 20)
+        ),
+        margin = list(t = 75, b = 20)) 
+    
     
     
     
@@ -1246,7 +1355,7 @@ server <- function(input, output, session) {
   output$doc1 <- renderUI({
     req(ClinDomit$designMatrix, limmaResult$gene_list)
     
-    kable_input<-kable(ClinDomit$designMatrix)%>%kable_styling(bootstrap_options = "striped") 
+    kable_input<-kable(ClinDomit$designMatrix)%>% kable_styling(bootstrap_options = "striped") 
     
     #kable_input<-kable(CD)%>%kable_styling() 
     

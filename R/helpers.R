@@ -147,7 +147,8 @@ matchedExpDesign <- function(expDesign, proteinAbundance){
 # Plots
 
 #' Distribution overview - Creates a sample-wise boxplot of log2-transformed intensity distribution.
-#' @param proteinAbundance 
+#' @param proteinAbundance A tibble containing unique Gene names and Sample columns with protein abundance values as produced by
+#' the Eatomics Shiny Application. 
 #' @return
 #' @export
 
@@ -164,7 +165,8 @@ plot_distribution <- function (proteinAbundance) {
 
 
 #' Protein Coverage - Creates a plot of sample-wise quantified protein coverage. 
-#' @param proteinAbundance 
+#' @param proteinAbundance  A tibble containing unique Gene names and Sample columns with protein abundance values as produced by
+#' the Eatomics Shiny Application. 
 #' @return
 #' @export
 
@@ -181,18 +183,19 @@ plot_proteinCoverage<-function (proteinAbundance) {
 
 #' Sample-to-sample heatmap  - Creates a heatmap of sample-to-sample distances based either on correlation coefficient or 
 #' euclidean distance
-#' @param proteinAbundnace 
+#' @param proteinAbundance  A tibble containing unique Gene names and Sample columns with protein abundance values as produced by
+#' the Eatomics Shiny Application. 
 #' @param corr A logical stating if the pairwise complete correlation coefficient should be used (= TRUE) or if the Euclidean 
 #' distance is used (= FALSE, default)
 #'
 #' @return
 #' @export
 #' 
-plot_StS_heatmap <- function(proteinAbundnace, corr = FALSE){
+plot_StS_heatmap <- function(proteinAbundance, corr = FALSE){
   if (corr == TRUE) {
-    sampleDists = cor(proteinAbundnace, use = "pairwise.complete.obs")
+    sampleDists = cor(proteinAbundance, use = "pairwise.complete.obs")
   } else {
-    sampleDists <- dist(t(proteinAbundnace), method = "euclidean")
+    sampleDists <- dist(t(proteinAbundance), method = "euclidean")
   }
   sampleDistMatrix <- as.matrix( sampleDists )
   colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
@@ -208,16 +211,16 @@ plot_StS_heatmap <- function(proteinAbundnace, corr = FALSE){
 #' proteins and a table displaying the top 30 abundant proteins. WIthin the diagram, proteins maing up the first quartile
 #' of total intensity are labelled. 
 #'
-#' @param filtpro
-#' @param plotText 
-#' @param Top30 
+#' @param proteinAbundance A tibble containing unique Gene names and Sample columns with protein abundance values as produced by
+#' the Eatomics Shiny Application. 
+#' @param plotText Character that enables to manipulate the sample selection annotation within the x-axis of the diagram. 
+#' Within the application the plot and axis title default to displaying all samples from the previous selection. 
 #'
 #' @return
 #' @export
-#'
-#' @examples
-plot_CumSumIntensities <- function(filtpro, plotText = "all selected samples", Top30 = TRUE){
-  filtered_proteins = filtpro
+
+plot_CumSumIntensities <- function(proteinAbundance, plotText = "all selected samples"){
+  filtered_proteins = proteinAbundance
   samplenames = colnames(filtered_proteins)
   GeneSumControl = sort(rowSums(filtered_proteins[,samplenames], na.rm = TRUE), decreasing = TRUE)
   GeneSumControlPerc = (GeneSumControl/sum(GeneSumControl) )* 100
@@ -252,6 +255,17 @@ plot_CumSumIntensities <- function(filtpro, plotText = "all selected samples", T
 
 #requires data in log space, with missing values either as -Inf or NA
 #if rowMaximumLimit=T, requires minimum 1 valid value per row
+#' Title
+#'
+#' @param data 
+#' @param width 
+#' @param shift 
+#' @param separateColumns 
+#' @param rowMaximumLimit 
+#'
+#' @return
+#' @export
+
 replaceMissingFromGaussian = function(data, width=0.3, shift=1.8, separateColumns=T, rowMaximumLimit=F){
   data=apply(data,2, function(x){
     x[is.infinite(x)]=0/0
