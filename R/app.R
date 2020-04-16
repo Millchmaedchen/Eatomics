@@ -808,7 +808,7 @@ server <- function(input, output, session) {
     output$filter_group_limma<- renderUI({
       selectInput(
         inputId = "filter_GR_fatcor",
-        label = strong("Select a group to filter on"),
+        label = strong("Select a second parameter"),
         selected = 3,
         choices = as.list(colnames(ClinData())),
         multiple = FALSE,
@@ -820,7 +820,7 @@ server <- function(input, output, session) {
       req(input$filter_GR_fatcor)
       if (ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical'){
         selectizeInput(inputId = "filter_levels",
-                       label = "Select groups to include in the analysis",
+                       label = "Filter: Select groups to include in the analysis",
                        choices = ClinData() %>% pull(input$filter_GR_fatcor) %>% levels(),
                        multiple = TRUE
         )
@@ -838,7 +838,7 @@ server <- function(input, output, session) {
     output$selectContrast <- renderUI({
       req(ClinDomit$mainParameter)
       selectizeInput(inputId = "contrastLevels", 
-                     label = "Select the two groups you want to calculate the difference on.",
+                     label = "Stratify: Select the two groups you want to calculate the difference on.",
                      #choices = ClinData() %>% pull(mainParameter) %>% levels()
                      choices = ClinDomit$data %>% pull(ClinDomit$mainParameter) %>% levels(),
                      multiple = TRUE, 
@@ -850,6 +850,11 @@ server <- function(input, output, session) {
   observe({
     ClinColClasses()[input$GR_fatcor] != "numeric"
     updateCheckboxInput(session, "ContinChoice", value = FALSE)
+  })
+  observe({
+    req(input$GR_fatcor)
+    input$GR_fatcor
+    updateCheckboxInput(session, "expandFilter", value = FALSE)
   })
   
   
@@ -878,50 +883,115 @@ server <- function(input, output, session) {
       ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
       ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
     }
-    ClinDomit$data = ClinData
+    ClinDomit$data = ClinData %>% clean_names()
     ClinData
   })
   
   ClinColClasses <- reactive({
-    #df = ClinDomit$data
     df = ClinData()
+    #df = ClinDomit$data
     df = lapply(df, class)
   })
   
-  observeEvent(c(#input$expandFilter, input$filter_GR_fatcor,
-    input$filter_levels, input$filter_num.cutoff), {
+  ClinColClasses_2 <- reactive({
+    df = ClinDomit$data
+    df = lapply(df, class)
+  })
+  
+  
+  
+  # set and manipulate chosen parameter to being cat from cont and form new groups from stratified setups
+  observeEvent(c(input$filter_GR_fatcor, 
+                 input$GR_fatcor,
+                 input$ContinChoice
+                 #input$filter_levels, input$filter_num.cutoff, 
+                 #input$analyzeLimma 
+                 )
+               , {
+      ClinDomit$mainParameter = make_clean_names(input$GR_fatcor)
+
+      ## --> missing: use a second catgorized parameter as filter and set a single parameter as ClinDomit$mainParameter
+      ## categorize numeric data - first parameter
+      if (input$ContinChoice == FALSE & ClinColClasses_2()[ClinDomit$mainParameter]=='numeric') {
+        req(input$num.cutoff)
+        ClinDomit$data = ClinDomit$data %>% 
+          mutate(categorizedParameter = 
+                   cut(dplyr::pull(ClinDomit$data, ClinDomit$mainParameter), 
+                       breaks = c(-Inf, input$num.cutoff, Inf), 
+                       labels = c(paste('less than or equal to', input$num.cutoff, sep='_'), paste('greater than', input$num.cutoff,sep='_'))
+                   ))  %>% 
+          mutate_if(is.character, as.factor)
+        #%>% 
+          #dplyr::select(-c(!!mainParameter)) 
+        colnames(ClinDomit$data)[colnames(ClinDomit$data) == "categorizedParameter"] = paste(input$GR_fatcor, "cat", sep = "_", collapse = "_")
+        ClinDomit$mainParameter = paste(input$GR_fatcor,  "cat", sep = "_", collapse = "_")
+      }
       if (is.null(need(input$expandFilter, FALSE)) & is.null(need(input$filter_GR_fatcor, FALSE))) {
         
-        ClinDomit$filterParameter = input$filter_GR_fatcor
-        if (ClinColClasses()[input$filter_GR_fatcor]=='numeric') {
+        ## categorize second numeric parameter
+        ClinDomit$filterParameter =  make_clean_names(input$filter_GR_fatcor)
+        if (ClinColClasses_2()[ClinDomit$filterParameter]=='numeric') {
           req(input$filter_num.cutoff)
           ClinDomit$data = ClinDomit$data %>% 
             mutate(filterParameter = 
-                     cut(dplyr::pull(ClinDomit$data, input$filter_GR_fatcor), 
+                     cut(dplyr::pull(ClinDomit$data, ClinDomit$filterParameter), 
                          breaks = c(-Inf, input$filter_num.cutoff, Inf), 
                          labels = c(paste('less than or equal to', input$filter_num.cutoff, sep='_'), paste('greater than', input$filter_num.cutoff,sep='_'))
-                     ))
-          ClinDomit$data = ClinDomit$data %>% unite("newFactor", input$GR_fatcor, filterParameter, remove = FALSE)  %>% mutate_if(is.character, as.factor)
-          colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(input$GR_fatcor, input$filter_GR_fatcor, sep = "_", collapse = "_")
-          ClinDomit$mainParameter = paste(input$GR_fatcor, input$filter_GR_fatcor, sep = "_", collapse = "_")
+                     )) %>% 
+            mutate_if(is.character, as.factor)
+          # if first parameter stays continuous, the second parameter becomes a filter and needs to be saved for experimental design creation 
+          if (ClinColClasses_2()[ClinDomit$mainParameter]=='numeric'){
+            ## rename and save filter parameter
+            colnames(ClinDomit$data)[colnames(ClinDomit$data) == "filterParameter"] = paste(ClinDomit$filterParameter) 
+           # ClinDomit$filterParameter = input$filter_GR_fatcor
+          } else {## unite cat first parameter and categorized second parameter, when first is cat or categorized
+            ClinDomit$data = ClinDomit$data %>% 
+              unite("newFactor", ClinDomit$mainParameter, filterParameter, remove = FALSE) %>% 
+              mutate_if(is.character, as.factor)
+            colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
+            ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
+            ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
+          }
         } else{
-          req(input$filter_levels)
-          #ClinDomit$data = ClinData() %>% unite("newFactor", input$GR_fatcor, filterParameter, remove = FALSE)  %>% mutate_if(is.character, as.factor)
-          ClinDomit$data = ClinData() %>% unite("newFactor", input$GR_fatcor, input$filter_GR_fatcor, remove = FALSE)  %>% mutate_if(is.character, as.factor)
-          colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(input$GR_fatcor, input$filter_GR_fatcor, sep = "_", collapse = "_")
-          ClinDomit$mainParameter = paste(input$GR_fatcor, input$filter_GR_fatcor, sep = "_", collapse = "_")
+          if (ClinColClasses_2()[ClinDomit$mainParameter]=='numeric'){
+            ## rename and save filter parameter
+            colnames(ClinDomit$data)[colnames(ClinDomit$data) == "filterParameter"] = paste(ClinDomit$filterParameter) 
+            # ClinDomit$filterParameter = input$filter_GR_fatcor
+          }else{
+            #req(input$filter_levels)
+            ## unite cat first and cat second parameter in the case of two cat parameters in the first place
+            ClinDomit$data = ClinDomit$data %>% unite("newFactor", ClinDomit$mainParameter, ClinDomit$filterParameter, remove = FALSE)  %>% mutate_if(is.character, as.factor)
+            colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
+            ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
+            ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
+            
+          }
+          
         }
       }
-    }, ignoreInit = TRUE, once = TRUE)
+    }, ignoreInit = TRUE
+#    , once = TRUE
+    )
   ## TODO: Rename Filter to "stratification"
   
   observeEvent(input$analyzeLimma ,{
     validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
+
     # clean names of input
-    if (is.null(ClinDomit$mainParameter)){
-      mainParameter = make_clean_names(input$GR_fatcor)
-    } else {
-      mainParameter = make_clean_names(ClinDomit$mainParameter)
+#    if(input$expandFilter == FALSE){
+#      ClinDomit$mainParameter = make_clean_names(input$GR_fatcor)
+#    }
+#    if (is.null(ClinDomit$mainParameter)){
+#      mainParameter = make_clean_names(input$GR_fatcor)
+#    } else {
+    
+    mainParameter = make_clean_names(ClinDomit$mainParameter)
+    if (!is.null(ClinDomit$filterParameter)) {
+      filterParameter = make_clean_names(ClinDomit$filterParameter)
+    }
+    #    }
+    if (input$expandFilter == TRUE & input$ContinChoice == FALSE) {
+      req(input$contrastLevels)
     }
     if (is.null(input$contrastLevels)){
       contrastLevels = input$levels
@@ -932,25 +1002,46 @@ server <- function(input, output, session) {
     covariates = input$covariates#, TODO: Set up instead of filter for example
     covariates = make_clean_names(covariates)
     
-    ClinData = ClinDomit$data %>% clean_names() %>% dplyr::select(patient_id, all_of(mainParameter), all_of(covariates)) %>% remove_missing() 
-    ClinColClasses = lapply(ClinData, class)
-    if (input$ContinChoice == FALSE & ClinColClasses[mainParameter]=='numeric') {
-      ClinData = ClinData %>% 
-        mutate(mainParameter = 
-                 cut(dplyr::pull(ClinData, mainParameter), 
-                     breaks = c(-Inf, input$num.cutoff, Inf), 
-                     labels = c(paste('less than or equal to', input$num.cutoff, sep='_'), paste('greater than', input$num.cutoff,sep='_'))
-                 )) %>% 
-        dplyr::select(-c(!!mainParameter)) 
-      colnames(ClinData) <- c("patient_id", covariates, mainParameter)
-      ClinColClasses[mainParameter] = "factor"
+    ## Remove na's and samples not missing filter criteria in the case of num + cat 
+    # ClinData = ClinDomit$data %>% 
+    #   clean_names() %>% 
+    #   dplyr::select(patient_id, mainParameter, covariates) %>% 
+    #   remove_missing() 
+    ## remove filtered, but only if first parameter was numeric and second is thus used as filter
+    browser()
+    if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
+      browser()
+      ClinData = ClinDomit$data %>% 
+        clean_names() %>% 
+        dplyr::select(patient_id, mainParameter, covariates, all_of(filterParameter)) %>% 
+        remove_missing() %>% 
+        dplyr::filter(!!sym(filterParameter) %in% !!input$filter_levels) %>% 
+        select(-filterParameter)
+    } else {
+      ClinData = ClinDomit$data %>% 
+        clean_names() %>% 
+        dplyr::select(patient_id, mainParameter, covariates) %>% 
+        remove_missing() 
     }
+    ClinColClasses = lapply(ClinData, class)
+    # ## categorize numeric data - first parameter
+    # if (input$ContinChoice == FALSE & ClinColClasses[mainParameter]=='numeric') {
+    #   ClinData = ClinData %>% 
+    #     mutate(mainParameter = 
+    #              cut(dplyr::pull(ClinData, mainParameter), 
+    #                  breaks = c(-Inf, input$num.cutoff, Inf), 
+    #                  labels = c(paste('less than or equal to', input$num.cutoff, sep='_'), paste('greater than', input$num.cutoff,sep='_'))
+    #              )) %>% 
+    #     dplyr::select(-c(!!mainParameter)) 
+    #   colnames(ClinData) <- c("patient_id", covariates, mainParameter)
+    #   ClinColClasses[mainParameter] = "factor"
+    # }
     
+    # Prep experimental design for first parameter being cat
     if (ClinColClasses[mainParameter]=='factor' | ClinColClasses[mainParameter]=='logical' ){
       #Reorder levels to mirror users selection of contrasts:
       if (ClinColClasses[mainParameter]=='factor') {
         ClinData[,mainParameter] = fct_relevel(dplyr::pull(ClinData, mainParameter), contrastLevels)
-        #ClinData = ClinData %>% mutate(!!mainParameter := fct_relevel(dplyr::pull(ClinData, mainParameter), input$levels))
       }
       if (length(covariates) == 0){
         expDesign = model_matrix(ClinData, as.formula(paste("~0", mainParameter, sep = "+", collapse = "+")))       
@@ -958,7 +1049,7 @@ server <- function(input, output, session) {
         expDesign = model_matrix(ClinData, as.formula(paste("~0", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
       }
     }
-    
+    # Prep experimental design for first parameter being cont.     
     if (input$ContinChoice == TRUE){
       if (length(covariates) == 0){
         expDesign = model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, sep = "+", collapse = "+")))       
@@ -971,14 +1062,15 @@ server <- function(input, output, session) {
     rownames(expDesign) <- ClinData$patient_id
     expDesign = matchedExpDesign(expDesign, proteinAbundance$original)
     ClinDomit$designMatrix = expDesign
-  })
+  #}, ignoreInit = TRUE)
   
   
-  observeEvent(input$analyzeLimma ,{
+  #observeEvent(input$analyzeLimma ,{
     req(ClinDomit$designMatrix)
     validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
     validate(need(sum(ClinDomit$designMatrix[,1])>=3, "The experimental design does not contain three or more samples to test on."))
-    
+
+
     # 
     # expDesignInst, ClinDomit$designMatrix
     # proteinAbundanceList, proteinAbundance (harbouring imputed and original)
@@ -987,7 +1079,7 @@ server <- function(input, output, session) {
     # validValuesTH, #TODO implement a threshold
     # remove_surrogates = FALSE, input$remove_sv
     # covariates = NULL#, needs front end implementation 
-    expDesignInst = ClinDomit$designMatrix %>% clean_names(., case = "big_camel") 
+    expDesignInst = ClinDomit$designMatrix %>% clean_names() 
     if (input$ContinChoice == FALSE){
       validate(need(sum(ClinDomit$designMatrix[,2])>=3, "The experimental design does not contain three or more samples to test on."))
       validProteins =  proteinAbundance$original[, rownames(expDesignInst)]
@@ -1025,7 +1117,7 @@ server <- function(input, output, session) {
     } else if (input$ContinChoice == TRUE)  {
       limmaResult$gene_list <- limma::topTable(fit3, coef=2, number = 1e+09, sort.by="P", adjust.method="BH")
     }
-  })
+  }, ignoreInit = TRUE)
   
   
   #limma_input <- reactive({
@@ -1040,17 +1132,6 @@ server <- function(input, output, session) {
     message("Genes in Limma: ", nrow(gene_list))
     gene_list$threshold = as.factor(abs(gene_list$logFC) > input$logFC & gene_list$adj.P.Val < input$adj.P.Val)
     
-    #TODO: implement title of volcano plot either reactive to current experimental setup or 
-    # make title as genereic as "volcano plot" and refer to experimental setup panel for further information
-    
-    # if (!is.null(input$expandFilter) && input$expandFilter == TRUE) {
-    #   Filnames = paste(" only ", input$filter_levels[1], collapse= "")
-    # } else {
-    #   Filnames = ""
-    # }
-    
-    Factor = input$GR_fatcor
-    
     reportBlocks$volcano_plot = 
       ggplot(data=gene_list, aes(x=logFC, y=-log10(P.Value) , colour=threshold)) +
       #ggtitle(paste(Factor,": ", names(ClinDomit$designMatrix)[2]," vs ", names(ClinDomit$designMatrix[1]), Filnames, collapse = "")) +
@@ -1060,21 +1141,7 @@ server <- function(input, output, session) {
       scale_color_tableau() +
       theme_light() +
       theme(legend.title = element_blank())
-    # if (input$ContinChoice == FALSE){
-    #   reportBlocks$volcano_plot = reportBlocks$volcano_plot +
-    #     ggtitle(label = "Volcano plot",
-    #          subtitle = paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")#,
-    #          #caption = paste(names(ClinDomit$designMatrix)[1], 
-    #         #                 " regulated when compared to ", 
-    #         #                 names(ClinDomit$designMatrix[2]), 
-    #         #                 Filnames, collapse = "")
-    #          )
-    #    # ggtitle(paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2]), Filnames, collapse = ""))
-    # } else {
-    #   reportBlocks$volcano_plot = reportBlocks$volcano_plot 
-    # 
-    # }
-    
+
   })
   
   
@@ -1102,9 +1169,6 @@ server <- function(input, output, session) {
     
     #Prepare interactive plot, reactive title and legend
 
-    #TODO: implement title of volcano plot either reactive to current experimental setup or 
-    # make title as genereic as "volcano plot" and refer to experimental setup panel for further information
-    
     if (!is.null(input$expandFilter) && input$expandFilter == TRUE) {
       Filnames = paste(" only ", input$filter_levels[1], collapse= "")
     } else {
@@ -1121,17 +1185,14 @@ server <- function(input, output, session) {
     } else {
       title_begin =  paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
     })
-    # legendtitle <- list(yref='paper', xref="container", y = 1, x = 1.16, 
-    #                     text = paste("Threshold: \n adj.p < ", 
-    #                                  input$adj.P.Val, " \n and \n log2FC +/- ", input$logFC), showarrow=F)
+   
     pp <- ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
       plotly::layout(
         legend = list(title = list(text = paste("Threshold: \n adj.p < ", 
                                                 input$adj.P.Val, 
                                                 " \n and \n log2FC +/- ", 
-                                                input$logFC)#, 
-                                   #side = "top left"
-                                   )), #annotations = legendtitle, 
+                                                input$logFC)
+                                   )), 
         title = list(text = paste0('Volcano plot',
                                    '<br>',
                                    '<sup>',
@@ -1143,17 +1204,7 @@ server <- function(input, output, session) {
                      pad = list(b = 20)
         ),
         margin = list(t = 75, b = 20)) 
-    
-    
-    
-    
-    # if (length(s_up)) {
-    #   pp<- reportBlocks$volcano_plot + geom_point(data = gene_regul$df_up[s_up,], color='red')
-    #   
-    # } else if (length(s_down)) {
-    #   pp<- reportBlocks$volcano_plot + geom_point(data = gene_regul$df_down[s_down,], color='green')
-    #   
-    # }
+
     pp
   })
   
