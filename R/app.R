@@ -903,12 +903,15 @@ server <- function(input, output, session) {
   # set and manipulate chosen parameter to being cat from cont and form new groups from stratified setups
   observeEvent(c(input$filter_GR_fatcor, 
                  input$GR_fatcor,
-                 input$ContinChoice
-                 #input$filter_levels, input$filter_num.cutoff, 
+                 input$ContinChoice, 
+                 input$num.cutoff 
+                 #input$filter_levels, 
                  #input$analyzeLimma 
                  )
                , {
+                 
       ClinDomit$mainParameter = make_clean_names(input$GR_fatcor)
+      browser()
 
       ## --> missing: use a second catgorized parameter as filter and set a single parameter as ClinDomit$mainParameter
       ## categorize numeric data - first parameter
@@ -923,8 +926,9 @@ server <- function(input, output, session) {
           mutate_if(is.character, as.factor)
         #%>% 
           #dplyr::select(-c(!!mainParameter)) 
-        colnames(ClinDomit$data)[colnames(ClinDomit$data) == "categorizedParameter"] = paste(input$GR_fatcor, "cat", sep = "_", collapse = "_")
-        ClinDomit$mainParameter = paste(input$GR_fatcor,  "cat", sep = "_", collapse = "_")
+        colnames(ClinDomit$data)[colnames(ClinDomit$data) == "categorizedParameter"] = paste(input$GR_fatcor, "cat", sep = "_", collapse = "_") %>% make_clean_names()
+        ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
+        ClinDomit$mainParameter = paste(input$GR_fatcor,  "cat", sep = "_", collapse = "_") %>% make_clean_names()
       }
       if (is.null(need(input$expandFilter, FALSE)) & is.null(need(input$filter_GR_fatcor, FALSE))) {
         
@@ -949,7 +953,7 @@ server <- function(input, output, session) {
               unite("newFactor", ClinDomit$mainParameter, filterParameter, remove = FALSE) %>% 
               mutate_if(is.character, as.factor)
             colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
-            ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
+            ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
             ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
           }
         } else{
@@ -962,7 +966,7 @@ server <- function(input, output, session) {
             ## unite cat first and cat second parameter in the case of two cat parameters in the first place
             ClinDomit$data = ClinDomit$data %>% unite("newFactor", ClinDomit$mainParameter, ClinDomit$filterParameter, remove = FALSE)  %>% mutate_if(is.character, as.factor)
             colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
-            ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
+            ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
             ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
             
           }
@@ -977,14 +981,6 @@ server <- function(input, output, session) {
   observeEvent(input$analyzeLimma ,{
     validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
 
-    # clean names of input
-#    if(input$expandFilter == FALSE){
-#      ClinDomit$mainParameter = make_clean_names(input$GR_fatcor)
-#    }
-#    if (is.null(ClinDomit$mainParameter)){
-#      mainParameter = make_clean_names(input$GR_fatcor)
-#    } else {
-    
     mainParameter = make_clean_names(ClinDomit$mainParameter)
     if (!is.null(ClinDomit$filterParameter)) {
       filterParameter = make_clean_names(ClinDomit$filterParameter)
@@ -1036,6 +1032,7 @@ server <- function(input, output, session) {
     #   colnames(ClinData) <- c("patient_id", covariates, mainParameter)
     #   ClinColClasses[mainParameter] = "factor"
     # }
+    if (input$ContinChoice == FALSE & ClinColClasses[ClinDomit$mainParameter]=='numeric'){req(input$num.cutoff)}
     
     # Prep experimental design for first parameter being cat
     if (ClinColClasses[mainParameter]=='factor' | ClinColClasses[mainParameter]=='logical' ){
