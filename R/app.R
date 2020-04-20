@@ -247,6 +247,76 @@ ui <- fluidPage(
                       )
                       
              ),
+             tabPanel("ssGSEA", 
+                      # actionBttn("tour_ssGSEA", icon("info"),color = "success",style = "material-circle",size = "xs"
+                      #),
+                      sidebarLayout(
+                        sidebarPanel(
+                          tags$strong("Change the parameters & hit the analyze button  ", style="color:#18bc9c"),
+                          selectInput(
+                            inputId = "gs.collection", 
+                            label = strong("MSigDb Gene Set Collection"),
+                            choices = names(gene.set.databases)
+                            #selected = "H-Hallmark50"
+                          ),
+                          
+                          selectInput("sample.norm.type",
+                                      label = "Select a normalization method",
+                                      choices = c("rank", "log", "log.rank", "none"),
+                                      selected = 1  
+                          ),
+                          numericInput("weight",
+                                       label = "Select a Weight (0 to 1)",
+                                       value = 0.75,
+                                       min = 0, max = 1
+                          ),
+                          selectInput("statistic",
+                                      label = "Select test statistic",
+                                      choices = c("area.under.RES", "Kolmogorov-Smirnov"),
+                                      selected = 1
+                          ),
+                          selectInput("output.score.type",
+                                      label = "Select enrichment score type",
+                                      choices = c("ES", "NES"),
+                                      selected = 2
+                          ),
+                          numericInput("nperm", 
+                                       label = "Enter the Number of Permutations",
+                                       value = 1000
+                          ),
+                          numericInput("min.overlap",
+                                       label = "Select the minimum overlap between gene set and data",
+                                       value = 5
+                          ),
+                          selectInput("correl.type",
+                                      label = "Select correlation type", 
+                                      choices = c("rank", "z.score", "symm.rank"),
+                                      selected = 1
+                          ),
+                          uiOutput("output.prefix"),
+                          
+                          tags$div(title= "Specify the type of analysis from above, then press the analyze button",
+                                   actionButton("goButton", "Analyze",class = "btn-primary")         
+                          )
+                        ),
+                        mainPanel(
+                          helpText("Make sure to upload proteinGroups.txt file before running ssGSEA"),
+                          bsCollapsePanel(p("Detailed description",style = "color:#18bc9c"),
+                                          HTML(markdownToHTML(fragment.only=TRUE, text=c( 
+                                            "* Single-sample GSEA [(ssGSEA)](http://software.broadinstitute.org/cancer/software/genepattern/modules/docs/ssGSEAProjection/4) is an extension of conventional  Gene Set Enrichment Analysis (GSEA),
+                                        developed by Broad insitute<sup>1</sup>.",
+                                            "* ssGSEA version used: v4",
+                                            "* MSigDB version used: v6.1 ",
+                                            "\n[1] Krug, K., et al., A Curated Resource for Phosphosite-specific Signature Analysis. Mol Cell
+                                                Proteomics, 2019. 18(3): p. 576-593."
+                                          )))),
+                          #      ssGSEA to calculate separate pathway enrichment scores for each pairing of a sample and geneset.
+                          #      Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a sample.")),
+                          
+                          useShinyalert()
+                        )
+                      )
+             ),
 
              
              #  navbarMenu("Help",icon = icon("info-circle"),
