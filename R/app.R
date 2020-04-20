@@ -81,6 +81,10 @@ source(paste(homeDir, '/helpers.R', sep = ""))
 # Load dependency on ssGSEA algorithm 
 source(paste(homeDir, '/ssGSEA_PSEA.R', sep = ""))
 
+# Load available gene sets from Data 
+gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
+names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
+
 ui <- fluidPage( 
   # Application title
   navbarPage("Eatomics",id="id",
@@ -255,9 +259,8 @@ ui <- fluidPage(
                           tags$strong("Change the parameters & hit the analyze button  ", style="color:#18bc9c"),
                           selectInput(
                             inputId = "gs.collection", 
-                            label = strong("MSigDb Gene Set Collection"),
+                            label = strong("Gene Set Collection"),
                             choices = names(gene.set.databases)
-                            #selected = "H-Hallmark50"
                           ),
                           
                           selectInput("sample.norm.type",
@@ -1540,6 +1543,7 @@ server <- function(input, output, session) {
   
   output$output.prefix <- renderUI({ 
     textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
+    browser()
   })
   
   dir.create("EnrichmentScore")
@@ -1550,6 +1554,7 @@ server <- function(input, output, session) {
     
     validate(need(input$files != "", "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
+
     ssgsea_data = as.matrix(original)
     #ssgsea_data= imp_woNorm()
     
@@ -1557,7 +1562,7 @@ server <- function(input, output, session) {
     withProgress(message = 'Calculation in progress',
                  detail = 'An alert notification will appear upon download of the file', value = 1, {
                    
-                   ssgsea_obj = ssGSEA2(input.ds =ssgsea_data, gene.set.databases=gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
+                   ssgsea_obj = ssGSEA2(input.ds =ssgsea_data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
                                         weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix)           
