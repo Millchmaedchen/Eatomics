@@ -24,7 +24,7 @@ p_load("shinyBS")
 # Load data
 #p_load("readxl")
 #p_load("readr")
-#p_load(openxlsx)
+p_load(openxlsx)
 
 # Visualization
 p_load("pheatmap")
@@ -905,15 +905,11 @@ server <- function(input, output, session) {
                  input$GR_fatcor,
                  input$ContinChoice, 
                  input$num.cutoff 
-                 #input$filter_levels, 
-                 #input$analyzeLimma 
                  )
                , {
                  
       ClinDomit$mainParameter = make_clean_names(input$GR_fatcor)
-      browser()
 
-      ## --> missing: use a second catgorized parameter as filter and set a single parameter as ClinDomit$mainParameter
       ## categorize numeric data - first parameter
       if (input$ContinChoice == FALSE & ClinColClasses_2()[ClinDomit$mainParameter]=='numeric') {
         req(input$num.cutoff)
@@ -998,15 +994,7 @@ server <- function(input, output, session) {
     covariates = input$covariates#, TODO: Set up instead of filter for example
     covariates = make_clean_names(covariates)
     
-    ## Remove na's and samples not missing filter criteria in the case of num + cat 
-    # ClinData = ClinDomit$data %>% 
-    #   clean_names() %>% 
-    #   dplyr::select(patient_id, mainParameter, covariates) %>% 
-    #   remove_missing() 
-    ## remove filtered, but only if first parameter was numeric and second is thus used as filter
-    browser()
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
-      browser()
       ClinData = ClinDomit$data %>% 
         clean_names() %>% 
         dplyr::select(patient_id, mainParameter, covariates, all_of(filterParameter)) %>% 
@@ -1020,19 +1008,9 @@ server <- function(input, output, session) {
         remove_missing() 
     }
     ClinColClasses = lapply(ClinData, class)
-    # ## categorize numeric data - first parameter
-    # if (input$ContinChoice == FALSE & ClinColClasses[mainParameter]=='numeric') {
-    #   ClinData = ClinData %>% 
-    #     mutate(mainParameter = 
-    #              cut(dplyr::pull(ClinData, mainParameter), 
-    #                  breaks = c(-Inf, input$num.cutoff, Inf), 
-    #                  labels = c(paste('less than or equal to', input$num.cutoff, sep='_'), paste('greater than', input$num.cutoff,sep='_'))
-    #              )) %>% 
-    #     dplyr::select(-c(!!mainParameter)) 
-    #   colnames(ClinData) <- c("patient_id", covariates, mainParameter)
-    #   ClinColClasses[mainParameter] = "factor"
-    # }
-    if (input$ContinChoice == FALSE & ClinColClasses[ClinDomit$mainParameter]=='numeric'){req(input$num.cutoff)}
+
+    if (input$ContinChoice == FALSE & ClinColClasses[ClinDomit$mainParameter]=='numeric')
+      {req(input$num.cutoff)}
     
     # Prep experimental design for first parameter being cat
     if (ClinColClasses[mainParameter]=='factor' | ClinColClasses[mainParameter]=='logical' ){
@@ -1059,7 +1037,6 @@ server <- function(input, output, session) {
     rownames(expDesign) <- ClinData$patient_id
     expDesign = matchedExpDesign(expDesign, proteinAbundance$original)
     ClinDomit$designMatrix = expDesign
-  #}, ignoreInit = TRUE)
   
   
   #observeEvent(input$analyzeLimma ,{
@@ -1067,15 +1044,6 @@ server <- function(input, output, session) {
     validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
     validate(need(sum(ClinDomit$designMatrix[,1])>=3, "The experimental design does not contain three or more samples to test on."))
 
-
-    # 
-    # expDesignInst, ClinDomit$designMatrix
-    # proteinAbundanceList, proteinAbundance (harbouring imputed and original)
-    # useImputed = TRUE, input$imputeForLimma
-    # ContinChoice = FALSE, input$ContinChoice
-    # validValuesTH, #TODO implement a threshold
-    # remove_surrogates = FALSE, input$remove_sv
-    # covariates = NULL#, needs front end implementation 
     expDesignInst = ClinDomit$designMatrix %>% clean_names() 
     if (input$ContinChoice == FALSE){
       validate(need(sum(ClinDomit$designMatrix[,2])>=3, "The experimental design does not contain three or more samples to test on."))
@@ -1394,7 +1362,7 @@ server <- function(input, output, session) {
                "Downregulated.GeneSets" = gsea_regul$df_down,
                "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
                "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap)
-      write.xlsx(x, file, row.names = FALSE)
+      openxlsx::write.xlsx(x, file, row.names = FALSE)
       dev.off()
     }
   )
@@ -1436,18 +1404,13 @@ server <- function(input, output, session) {
   output$report <- downloadHandler(
     # For PDF output, change this to "report.pdf"
     #filename = "report.pdf",
-    filename = paste(Sys.info()[["user"]],Sys.Date(),"report.html", sep="_"),
+    filename = "report.html",
     
-    content = function(file) {
+    content = function(filename) {
       # Copy the report file to a temporary directory before processing it, in
       # case we don't have write permissions to the current working dir (which
       # can happen when deployed).
-      
-      #tempReport <- file.path(tempdir(), "report.Rmd")
-      # tempp<-file.path("C:/Users/Mariet.Mathew-Stephe/Documents/R/win-library/3.6","report.Rmd")
-      # file.copy("report.Rmd", tempp, overwrite = TRUE)
-      
-      #gg = limma_input()
+    
       
       # Set up parameters to pass to Rmd document
       params <- list(
@@ -1487,13 +1450,17 @@ server <- function(input, output, session) {
       # Knit the document, passing in the `params` list, and eval it in a
       # child of the global environment (this isolates the code in the document
       # from the code in this app).
-      rmarkdown::render("report.Rmd", output_dir  = getwd(),
+      rmarkdown::render(input = "report.Rmd", 
+                      output_file = paste('EatomicsReport_', Sys.time(), '.html', sep = ''),
+                       output_dir  = getwd(),
+                       clean = TRUE,
+                       quiet = TRUE, 
                         params = params,
                         envir = new.env(parent = globalenv())
       )
       
       
-      uploadName = paste('EatomicsReport-', Sys.Date(), Sys.time(), '.html', sep = '')
+      #uploadName = paste('EatomicsReport-', Sys.Date(), Sys.time(), '.html', sep = '')
       #drive_upload("report.html", name = uploadName)
     }
   )
