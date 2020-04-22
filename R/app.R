@@ -81,6 +81,10 @@ source(paste(homeDir, '/helpers.R', sep = ""))
 # Load dependency on ssGSEA algorithm 
 source(paste(homeDir, '/ssGSEA_PSEA.R', sep = ""))
 
+# Load available gene sets from Data 
+gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
+names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
+
 ui <- fluidPage( 
   # Application title
   navbarPage("Eatomics",id="id",
@@ -246,6 +250,75 @@ ui <- fluidPage(
                         )
                       )
                       
+             ),
+             tabPanel("ssGSEA", 
+                      # actionBttn("tour_ssGSEA", icon("info"),color = "success",style = "material-circle",size = "xs"
+                      #),
+                      sidebarLayout(
+                        sidebarPanel(
+                          tags$strong("Change the parameters & hit the analyze button  ", style="color:#18bc9c"),
+                          selectInput(
+                            inputId = "gs.collection", 
+                            label = strong("Gene Set Collection"),
+                            choices = names(gene.set.databases)
+                          ),
+                          
+                          selectInput("sample.norm.type",
+                                      label = "Select a normalization method",
+                                      choices = c("rank", "log", "log.rank", "none"),
+                                      selected = 1  
+                          ),
+                          numericInput("weight",
+                                       label = "Select a Weight (0 to 1)",
+                                       value = 0.75,
+                                       min = 0, max = 1
+                          ),
+                          selectInput("statistic",
+                                      label = "Select test statistic",
+                                      choices = c("area.under.RES", "Kolmogorov-Smirnov"),
+                                      selected = 1
+                          ),
+                          selectInput("output.score.type",
+                                      label = "Select enrichment score type",
+                                      choices = c("ES", "NES"),
+                                      selected = 2
+                          ),
+                          numericInput("nperm", 
+                                       label = "Enter the Number of Permutations",
+                                       value = 1000
+                          ),
+                          numericInput("min.overlap",
+                                       label = "Select the minimum overlap between gene set and data",
+                                       value = 5
+                          ),
+                          selectInput("correl.type",
+                                      label = "Select correlation type", 
+                                      choices = c("rank", "z.score", "symm.rank"),
+                                      selected = 1
+                          ),
+                          uiOutput("output.prefix"),
+                          
+                          tags$div(title= "Specify the type of analysis from above, then press the analyze button",
+                                   actionButton("goButton", "Analyze",class = "btn-primary")         
+                          )
+                        ),
+                        mainPanel(
+                          helpText("Make sure to upload proteinGroups.txt file before running ssGSEA"),
+                          bsCollapsePanel(p("Detailed description",style = "color:#18bc9c"),
+                                          HTML(markdownToHTML(fragment.only=TRUE, text=c( 
+                                            "* Single-sample GSEA [(ssGSEA)](http://software.broadinstitute.org/cancer/software/genepattern/modules/docs/ssGSEAProjection/4) is an extension of conventional  Gene Set Enrichment Analysis (GSEA),
+                                        developed by Broad insitute<sup>1</sup>.",
+                                            "* ssGSEA version used: v4",
+                                            "* MSigDB version used: v6.1 ",
+                                            "\n[1] Krug, K., et al., A Curated Resource for Phosphosite-specific Signature Analysis. Mol Cell
+                                                Proteomics, 2019. 18(3): p. 576-593."
+                                          )))),
+                          #      ssGSEA to calculate separate pathway enrichment scores for each pairing of a sample and geneset.
+                          #      Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a sample.")),
+                          
+                          useShinyalert()
+                        )
+                      )
              ),
 
              
@@ -1470,6 +1543,7 @@ server <- function(input, output, session) {
   
   output$output.prefix <- renderUI({ 
     textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
+    browser()
   })
   
   dir.create("EnrichmentScore")
@@ -1480,6 +1554,7 @@ server <- function(input, output, session) {
     
     validate(need(input$files != "", "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
+
     ssgsea_data = as.matrix(original)
     #ssgsea_data= imp_woNorm()
     
@@ -1487,7 +1562,7 @@ server <- function(input, output, session) {
     withProgress(message = 'Calculation in progress',
                  detail = 'An alert notification will appear upon download of the file', value = 1, {
                    
-                   ssgsea_obj = ssGSEA2(input.ds =ssgsea_data, gene.set.databases=gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
+                   ssgsea_obj = ssGSEA2(input.ds =ssgsea_data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
                                         weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix)           
