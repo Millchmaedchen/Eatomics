@@ -320,6 +320,31 @@ ui <- fluidPage(
                         )
                       )
              ),
+             
+             tabPanel("Differential Enrichment", 
+                      sidebarLayout(       
+                        sidebarPanel(
+                          selectInput(
+                            inputId = "diff.gs.collection", 
+                            label = strong("Enrichment scores collection"), 
+                            choices = list.files(path = "EnrichmentScore")
+                          ), 
+                          conditionalPanel(condition = "input.gsea_CinDs",
+                                           uiOutput("conditional_groupingGSEA")),
+                          conditionalPanel(condition = "input.GR_fatcorGSEA",
+                                           uiOutput("conditional_subselectGRGSEA")), 
+                          checkboxInput(inputId = "expandFilterGSEA", 
+                                        label = "Apply filters", 
+                                        FALSE), 
+                          conditionalPanel(condition = "input.expandFilterGSEA == TRUE", 
+                                           uiOutput("filter_group_gsea")),
+                          conditionalPanel( condition = "input.expandFilterGSEA == TRUE", 
+                                           uiOutput("filter_level_gsea")),
+                          actionButton(inputId = "filterGSEA", label = "Analyze", class = "btn-primary")
+                        ),
+                        mainPanel()
+                      )
+                      ),
 
              
              #  navbarMenu("Help",icon = icon("info-circle"),
@@ -575,7 +600,7 @@ server <- function(input, output, session) {
         need(length(input$PCs) == 2, "Please select exactly two principal components for plotting.")
       )
       cc <- pca_input_samples()
-      if (is.null(input$labelCol) | input$labelCol == "" | input$labelCol=="none") {
+      if (is.null(input$labelCol) | input$labelCol == "" | input$labelCol=="none" ) {
         groups = NULL
         labels = rownames(cc$x)
         
@@ -952,10 +977,10 @@ server <- function(input, output, session) {
                         skip_empty_rows = TRUE, 
                         locale = locale(decimal_mark = ",") # Todo: uncomment this for US/English seperator
     ) %>% remove_empty("cols") %>% mutate_if(is.character, as.factor) %>% mutate_if(is.logical, as.factor)
-    if(protfile$protfile$name == "proteinGroups.freeze.txt"){ ### TODO: Uncomment for public use!
-      ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
-      ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
-    }
+    # if(protfile$protfile$name == "proteinGroups.freeze.txt"){ ### TODO: Uncomment for public use!
+    #   ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
+    #   ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
+    # }
     ClinDomit$data = ClinData %>% clean_names()
     ClinData
   })
