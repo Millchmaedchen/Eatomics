@@ -81,9 +81,15 @@ source(paste(homeDir, '/helpers.R', sep = ""))
 # Load dependency on ssGSEA algorithm 
 source(paste(homeDir, '/ssGSEA_PSEA.R', sep = ""))
 
+# Load experimental design module
+source("expDesignModule.R")
+
 # Load available gene sets from Data 
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
+
+sessionID = paste( "EnrichmentScore", idmaker(1), sep = "")
+dir.create(sessionID) # flush directory when session ends
 
 ui <- fluidPage( 
   # Application title
@@ -319,32 +325,37 @@ ui <- fluidPage(
                           useShinyalert()
                         )
                       )
-             ),
+             ), 
              
-             tabPanel("Differential Enrichment", 
-                      sidebarLayout(       
-                        sidebarPanel(
-                          selectInput(
-                            inputId = "diff.gs.collection", 
-                            label = strong("Enrichment scores collection"), 
-                            choices = list.files(path = "EnrichmentScore")
-                          ), 
-                          conditionalPanel(condition = "input.gsea_CinDs",
-                                           uiOutput("conditional_groupingGSEA")),
-                          conditionalPanel(condition = "input.GR_fatcorGSEA",
-                                           uiOutput("conditional_subselectGRGSEA")), 
-                          checkboxInput(inputId = "expandFilterGSEA", 
-                                        label = "Apply filters", 
-                                        FALSE), 
-                          conditionalPanel(condition = "input.expandFilterGSEA == TRUE", 
-                                           uiOutput("filter_group_gsea")),
-                          conditionalPanel( condition = "input.expandFilterGSEA == TRUE", 
-                                           uiOutput("filter_level_gsea")),
-                          actionButton(inputId = "filterGSEA", label = "Analyze", class = "btn-primary")
-                        ),
-                        mainPanel()
-                      )
+             tabPanel("Differential Enrichment",
+                      uiOutput("diff.gs.collection"),
+                      expDesignModule_UI(id = "gsea")
                       ),
+             
+             # tabPanel("Differential Enrichment", 
+             #          sidebarLayout(       
+             #            sidebarPanel(
+             #              selectInput(
+             #                inputId = "diff.gs.collection", 
+             #                label = strong("Enrichment scores collection"), 
+             #                choices = list.files(path = paste(sessionID, "/", sep = ""))
+             #              ), 
+             #              conditionalPanel(condition = "input.gsea_CinDs",
+             #                               uiOutput("conditional_groupingGSEA")),
+             #              conditionalPanel(condition = "input.GR_fatcorGSEA",
+             #                               uiOutput("conditional_subselectGRGSEA")), 
+             #              checkboxInput(inputId = "expandFilterGSEA", 
+             #                            label = "Apply filters", 
+             #                            FALSE), 
+             #              conditionalPanel(condition = "input.expandFilterGSEA == TRUE", 
+             #                               uiOutput("filter_group_gsea")),
+             #              conditionalPanel( condition = "input.expandFilterGSEA == TRUE", 
+             #                               uiOutput("filter_level_gsea")),
+             #              actionButton(inputId = "filterGSEA", label = "Analyze", class = "btn-primary")
+             #            ),
+             #            mainPanel()
+             #          )
+             #          ),
 
              
              #  navbarMenu("Help",icon = icon("info-circle"),
@@ -1070,8 +1081,7 @@ server <- function(input, output, session) {
     }, ignoreInit = TRUE
 #    , once = TRUE
     )
-  ## TODO: Rename Filter to "stratification"
-  
+
   observeEvent(input$analyzeLimma ,{
     validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
 
@@ -1569,13 +1579,12 @@ server <- function(input, output, session) {
   output$output.prefix <- renderUI({ 
     textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
   })
-  
-  dir.create("EnrichmentScore")
+
   
   # run the ssGSEA analysis
   #getssgseaObj = eventReactive(input$goButton,{
   observeEvent(input$goButton, {
-    
+    browser()
     validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
     ssgsea_data = as.matrix(original)
@@ -1583,15 +1592,15 @@ server <- function(input, output, session) {
     
     
     withProgress(message = 'Calculation in progress',
-                 detail = 'An alert notification will appear upon download of the file', value = 1, {
+                 detail = 'An alert notification will appear upon success of calculation.', value = 1, {
                    
                    ssgsea_obj = ssGSEA2(input.ds =ssgsea_data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
                                         weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
-                                        nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix)           
+                                        nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
                  }) 
     
-    shinyalert("File is downloaded", type = "success")                     
+    shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success")                     
   })
   
   
@@ -1611,6 +1620,21 @@ server <- function(input, output, session) {
   ###4.Differential GSEA tab
   #TODO introduce error handling into t-test function
   #TODO enable to use imputation or not but give a hint that results will shrink dramatically if imputation is not used
+  
+  gs_file_list <- reactive({
+    list.files(path = paste(sessionID, "/", sep = ""))
+  })
+  output$diff.gs.collection <- renderUI({
+                     selectInput(
+                       inputId = "diff.gs.collection_file", 
+                       label = strong("Choose enrichment score file"),
+                       choices = gs_file_list(),
+                       multiple = FALSE,
+                       selectize = TRUE
+                     )
+  })
+
+  callModule(module = expDesignModule, id = "gsea", measurementFile = reactive(input$diff.gs.collection_file))
   
   ClinDnamesGSEA <- reactive({
     rownames(ClinData())
@@ -1632,7 +1656,7 @@ server <- function(input, output, session) {
   })
   
   selected_gsea.score <- reactive({
-    read.delim(paste("EnrichmentScore/", input$diff.gs.collection, sep = ""), stringsAsFactors=F, skip=2, row.names='Name')
+    read.delim(paste(sessionID, "/", input$diff.gs.collection, sep = ""), stringsAsFactors = F, skip=2, row.names='Name')
   })
   
   output$conditional_groupingGSEA <- renderUI({
