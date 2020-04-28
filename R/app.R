@@ -1568,7 +1568,6 @@ server <- function(input, output, session) {
   
   output$output.prefix <- renderUI({ 
     textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
-    browser()
   })
   
   dir.create("EnrichmentScore")
@@ -1577,9 +1576,8 @@ server <- function(input, output, session) {
   #getssgseaObj = eventReactive(input$goButton,{
   observeEvent(input$goButton, {
     
-    validate(need(input$files != "", "Please upload proteomics data first (previous tab)."))
+    validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
-
     ssgsea_data = as.matrix(original)
     #ssgsea_data= imp_woNorm()
     
@@ -1969,7 +1967,7 @@ server <- function(input, output, session) {
   ###5. About tabpanel
   
   output$markdown <- renderUI({
-    includeHTML("markdown_docs/About.html")
+    includeHTML("About.html")
   })
   
   ####tour guide

@@ -17,7 +17,7 @@
 ##       Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles.
 ##       Proceedings of the National Academy of Sciences of the United States of America, 102(43), 15545–15550.
 
-require(pacman)
+#require(pacman)
 
 
 ssGSEA2 <- function (
