@@ -82,7 +82,7 @@ source(paste(homeDir, '/helpers.R', sep = ""))
 source(paste(homeDir, '/ssGSEA_PSEA.R', sep = ""))
 
 # Load experimental design module
-source("expDesignModule.R")
+source(paste(homeDir, '/expDesignModule.R', sep = ""))
 
 # Load available gene sets from Data 
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
@@ -1575,31 +1575,31 @@ server <- function(input, output, session) {
   
   ###3 ssGSEA tab 
   
-  
+  ssgsea_data = reactiveValues()
   output$output.prefix <- renderUI({ 
     textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
   })
 
-  
   # run the ssGSEA analysis
   #getssgseaObj = eventReactive(input$goButton,{
   observeEvent(input$goButton, {
-    browser()
+
     validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
-    ssgsea_data = as.matrix(original)
+    ssgsea_data$data = as.matrix(original)
     #ssgsea_data= imp_woNorm()
     
     
     withProgress(message = 'Calculation in progress',
                  detail = 'An alert notification will appear upon success of calculation.', value = 1, {
                    
-                   ssgsea_obj = ssGSEA2(input.ds =ssgsea_data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
+                   ssgsea_obj = ssGSEA2(input.ds = ssgsea_data$data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
                                         weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
                  }) 
-    
+    browser()
+    ssgsea_data$prefix = ssgsea_obj
     shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success")                     
   })
   
@@ -1620,21 +1620,30 @@ server <- function(input, output, session) {
   ###4.Differential GSEA tab
   #TODO introduce error handling into t-test function
   #TODO enable to use imputation or not but give a hint that results will shrink dramatically if imputation is not used
-  
-  gs_file_list <- reactive({
-    list.files(path = paste(sessionID, "/", sep = ""))
-  })
-  output$diff.gs.collection <- renderUI({
-                     selectInput(
-                       inputId = "diff.gs.collection_file", 
-                       label = strong("Choose enrichment score file"),
-                       choices = gs_file_list(),
-                       multiple = FALSE,
-                       selectize = TRUE
-                     )
-  })
 
-  callModule(module = expDesignModule, id = "gsea", measurementFile = reactive(input$diff.gs.collection_file))
+  gs_file_list = reactive({ssgsea_data$prefix
+    list.files(path = paste(sessionID, "/", sep = ""))})
+
+observe({
+  ssgsea_data$prefix
+  output$diff.gs.collection <- renderUI({
+    selectInput(
+      inputId = "diff.gs.collection_file", 
+      label = strong("Choose enrichment score file"),
+      choices = gs_file_list(),
+      multiple = FALSE,
+      selectize = TRUE
+    )
+  })
+  
+})
+
+
+
+  callModule(module = expDesignModule, id = "gsea", 
+             measurementFile = reactive(input$diff.gs.collection_file),
+             ClinData = reactive(ClinDomit$data)
+             )
   
   ClinDnamesGSEA <- reactive({
     rownames(ClinData())
@@ -1693,41 +1702,39 @@ server <- function(input, output, session) {
     }
   })
   
-  observeEvent(input$expandFilterGSEA, {
-    output$filter_group_gsea<- renderUI({
-      selectInput(
-        inputId = "filter_GR_fatcorGSEA",
-        label = strong("Select a group to filter on"),
-        selected = 3,
-        choices = as.list(colnames(ClinData())),
-        multiple = FALSE,
-        selectize = TRUE
-      )
-    })
-    
-    
-    output$filter_level_gsea <- renderUI({
-      req(input$filter_GR_fatcorGSEA)
-      if (ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='logical'){
-        selectizeInput(inputId = "filter_levelsGSEA",
-                       label = "Select one group to include in the analysis",
-                       choices =  ClinData() %>% pull(input$filter_GR_fatcorGSEA) %>% levels(),
-                       multiple = FALSE
-        )
-        
-      } else #if(ClinColClasses()[,input$filter_GR_fatcorGSEA]=="numeric")
-      {
-        f = ClinData() %>% pull(input$GR_fatcorGSEA)
-        sliderInput(
-          inputId = "filter_num.cutoffGSEA",
-          label = "Select cutoff to filter:",
-          min = min(f, na.rm = TRUE),
-          max = max(f, na.rm = TRUE),
-          value = colMeans(ClinData()[input$filter_GR_fatcorGSEA], na.rm = TRUE), round = T
-        )
-      }
-    })
-  },ignoreNULL = FALSE, ignoreInit = TRUE)
+  # observeEvent(input$expandFilterGSEA, {
+  #   output$filter_group_gsea<- renderUI({
+  #     selectInput(
+  #       inputId = "filter_GR_fatcorGSEA",
+  #       label = strong("Select a group to filter on"),
+  #       selected = 3,
+  #       choices = as.list(colnames(ClinData())),
+  #       multiple = FALSE,
+  #       selectize = TRUE
+  #     )
+  #   })
+   # output$filter_level_gsea <- renderUI({
+  #    req(input$filter_GR_fatcorGSEA)
+  #    if (ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='logical'){
+  #      selectizeInput(inputId = "filter_levelsGSEA",
+  #                     label = "Select one group to include in the analysis",
+  #                     choices =  ClinData() %>% pull(input$filter_GR_fatcorGSEA) %>% levels(),
+  #                     multiple = FALSE
+  #      )
+  #      
+  #    } else #if(ClinColClasses()[,input$filter_GR_fatcorGSEA]=="numeric")
+  #    {
+  #      f = ClinData() %>% pull(input$GR_fatcorGSEA)
+  #      sliderInput(
+  #        inputId = "filter_num.cutoffGSEA",
+  #        label = "Select cutoff to filter:",
+  #        min = min(f, na.rm = TRUE),
+  #        max = max(f, na.rm = TRUE),
+  #        value = colMeans(ClinData()[input$filter_GR_fatcorGSEA], na.rm = TRUE), round = T
+  #      )
+  #    }
+  #  })
+  #},ignoreNULL = FALSE, ignoreInit = TRUE)
   
   ClinDomitGSEA <- reactiveValues()
   

@@ -824,7 +824,7 @@ ssGSEA2 <- function (
   P.GCT <- data.frame(pval.matrix.2)
   names(P.GCT) <- sample.names
   row.names(P.GCT) <- gs.names.2
-  write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0("EnrichmentScore/", output.prefix, '-pvalues.gct', sep=''))
+  write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0(directory, "/", output.prefix, '-pvalues.gct', sep=''))
   
   ##################################################
   ## p-value correction
@@ -838,7 +838,7 @@ ssGSEA2 <- function (
         F.GCT[,i] <- p.adjust (F.GCT[,i], method='fdr')
       
       ## export
-      write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0("EnrichmentScore/", output.prefix, '-fdr-pvalues.gct', sep=''))
+      write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0(directory, "/",  output.prefix, '-fdr-pvalues.gct', sep=''))
   }
   
   return(random.walk)
