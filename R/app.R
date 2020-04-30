@@ -328,7 +328,7 @@ ui <- fluidPage(
              ), 
              
              tabPanel("Differential Enrichment",
-                      uiOutput("diff.gs.collection"),
+                      #uiOutput("diff.gs.collection"),
                       expDesignModule_UI(id = "gsea")
                       ),
              
@@ -1575,7 +1575,7 @@ server <- function(input, output, session) {
   
   ###3 ssGSEA tab 
   
-  ssgsea_data = reactiveValues()
+  ssgsea_data = reactiveValues(file = NULL)
   output$output.prefix <- renderUI({ 
     textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
   })
@@ -1598,7 +1598,7 @@ server <- function(input, output, session) {
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
                  }) 
-    browser()
+    
     ssgsea_data$prefix = ssgsea_obj
     shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success")                     
   })
@@ -1621,27 +1621,35 @@ server <- function(input, output, session) {
   #TODO introduce error handling into t-test function
   #TODO enable to use imputation or not but give a hint that results will shrink dramatically if imputation is not used
 
-  gs_file_list = reactive({ssgsea_data$prefix
-    list.files(path = paste(sessionID, "/", sep = ""))})
-
-observe({
-  ssgsea_data$prefix
-  output$diff.gs.collection <- renderUI({
-    selectInput(
-      inputId = "diff.gs.collection_file", 
-      label = strong("Choose enrichment score file"),
-      choices = gs_file_list(),
-      multiple = FALSE,
-      selectize = TRUE
-    )
+  gs_file_list = observeEvent(ssgsea_data$prefix,{
+    
+    if(is.null(ssgsea_data$prefix)){
+      ssgsea_data$file = NULL}
+    else{
+      ssgsea_data$file = list.files(path = paste(sessionID, "/", sep = ""))
+    }
   })
-  
-})
+
+# observe({
+#   ssgsea_data$prefix
+#   output$diff.gs.collection <- renderUI({
+#     selectInput(
+#       inputId = "diff.gs.collection_file", 
+#       label = strong("Choose enrichment score file"),
+#       choices = gs_file_list(),
+#       multiple = FALSE,
+#       selectize = TRUE
+#     )
+#   })
+#   
+# })
 
 
 
   callModule(module = expDesignModule, id = "gsea", 
-             measurementFile = reactive(input$diff.gs.collection_file),
+             ssgsea_data_update = reactive(ssgsea_data$prefix),
+             gs_file_list = reactive(ssgsea_data$file),
+             sessionID = sessionID,
              ClinData = reactive(ClinDomit$data)
              )
   
