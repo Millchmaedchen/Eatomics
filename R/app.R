@@ -329,7 +329,6 @@ dir.create(sessionID) # flush directory when session ends
                       )
              ), 
              
-<<<<<<< HEAD
              shiny::tabPanel("Differential Enrichment", 
                       shiny::sidebarLayout(       
                         shiny::sidebarPanel(
@@ -1020,7 +1019,7 @@ server <- function(input, output, session) {
     #   ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
     #   ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
     # }
-    ClinDomit$data = ClinData %>% clean_names()
+    ClinDomit$data = ClinData %>% janitor::clean_names()
     ClinData
   })
   
@@ -1132,14 +1131,14 @@ server <- function(input, output, session) {
     
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
       ClinData = ClinDomit$data %>% 
-        clean_names() %>% 
+        janitor::clean_names() %>% 
         dplyr::select(patient_id, mainParameter, covariates, all_of(filterParameter)) %>% 
         ggplot2::remove_missing() %>% 
         dplyr::filter(!!sym(filterParameter) %in% !!input$filter_levels) %>% 
         dplyr::select(-filterParameter)
     } else {
       ClinData = ClinDomit$data %>% 
-        clean_names() %>% 
+        janitor::clean_names() %>% 
         dplyr::select(patient_id, mainParameter, covariates) %>% 
         ggplot2::remove_missing() 
     }
@@ -1180,7 +1179,7 @@ server <- function(input, output, session) {
     shiny::validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
     shiny::validate(need(sum(ClinDomit$designMatrix[,1])>=3, "The experimental design does not contain three or more samples to test on."))
 
-    expDesignInst = ClinDomit$designMatrix %>% clean_names() 
+    expDesignInst = ClinDomit$designMatrix %>% janitor::clean_names() 
     if (input$ContinChoice == FALSE){
       shiny::validate(need(sum(ClinDomit$designMatrix[,2])>=3, "The experimental design does not contain three or more samples to test on."))
       validProteins =  proteinAbundance$original[, rownames(expDesignInst)]
@@ -1212,7 +1211,7 @@ server <- function(input, output, session) {
       
       fit <- limma::lmFit(proteinAbundanceLimma, as.matrix(expDesignInst))
     }
-    fit3 <- eBayes(fit, trend = TRUE) 
+    fit3 <- limma::eBayes(fit, trend = TRUE) 
     if (input$ContinChoice == FALSE) {
       limmaResult$gene_list <- limma::topTable(fit3, coef=1, number = 1e+09, sort.by="P", adjust.method="BH")
     } else if (input$ContinChoice == TRUE)  {
