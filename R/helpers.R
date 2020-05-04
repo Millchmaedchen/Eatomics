@@ -328,4 +328,13 @@ replaceMissingFromGaussian = function(data, width=0.3, shift=1.8, separateColumn
   return(data)
 }
 
-
+#### ID Maker by R-bloggers ###
+idmaker <- function(x){
+  max.val = x*100
+  count <- nchar(as.character(max.val))                       # find out how many 'numbers' each ID will have after the letter
+  size <- paste("%0",count,"d",sep="")                        # set the variable to be fed into 'sprintf' to ensure we have leading 0's
+  lets <- toupper(sample(letters,x, replace=T))               # randomising the letters 
+  nums <- sprintf(size, sample(1:max.val))[1:x]               # randominsing the numbers, and ensuing they all have the same number of characters
+  ids <- paste(lets,nums,sep="")                              # joining them together
+  return(ids[1])
+}

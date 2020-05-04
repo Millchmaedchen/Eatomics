@@ -42,7 +42,8 @@ ssGSEA2 <- function (
   
   par=F,
   spare.cores=1,
-  log.file='run.log') {
+  log.file='run.log',
+  directory = NULL) {
   ## #######################################################################
   ## single sample GSEA
   ## for results similar to the Java version, use: weight=0;
@@ -813,7 +814,7 @@ ssGSEA2 <- function (
   V.GCT <- data.frame(score.matrix.2)
   names(V.GCT) <- sample.names
   row.names(V.GCT) <- gs.names.2
-  write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0("EnrichmentScore/", output.prefix, '.gct', sep=''))
+  write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0(directory, "/", output.prefix, '.gct', sep=""))
   
   
   ##View(V.GCT)
@@ -823,7 +824,7 @@ ssGSEA2 <- function (
   P.GCT <- data.frame(pval.matrix.2)
   names(P.GCT) <- sample.names
   row.names(P.GCT) <- gs.names.2
-  write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0("EnrichmentScore/", output.prefix, '-pvalues.gct', sep=''))
+  write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0(directory, "/", output.prefix, '-pvalues.gct', sep=''))
   
   ##################################################
   ## p-value correction
@@ -837,7 +838,7 @@ ssGSEA2 <- function (
         F.GCT[,i] <- p.adjust (F.GCT[,i], method='fdr')
       
       ## export
-      write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0("EnrichmentScore/", output.prefix, '-fdr-pvalues.gct', sep=''))
+      write.gct(gct.data.frame=V.GCT, descs=gs.descs.2,file = paste0(directory, "/",  output.prefix, '-fdr-pvalues.gct', sep=''))
   }
   
   return(random.walk)

@@ -9,5 +9,10 @@ Eatomics is a web application developed using Shiny. Eatomics enables fast explo
 
 # Troubleshooting 
 
-R version < 3.6 will need a lower version of caTools in order to create proper reports from rmarkdown - this might help to fix any caTools related errors.
+- R version < 3.6 will need a lower version of caTools in order to create proper reports from rmarkdown - this might help to fix any caTools related errors.
 install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools_1.14.tar.gz", repos=NULL, type="source")
+
+- PCA plot depends on a package called biplot, which can be installed via 
+install_github("vqv/ggbiplot")
+- as for this repository, devtools needs to be installed as well 
+install.packages("devtools)
