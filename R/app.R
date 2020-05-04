@@ -88,14 +88,11 @@ source(paste(homeDir, '/expDesignModule.R', sep = ""))
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
 
-<<<<<<< HEAD
+
 ui <- shiny::fluidPage( 
-=======
 sessionID = paste( "EnrichmentScore", idmaker(1), sep = "")
 dir.create(sessionID) # flush directory when session ends
 
-ui <- fluidPage( 
->>>>>>> 19458d7ec6d4dde13a9890e1cb98656b38b66be2
   # Application title
   shiny::navbarPage("Eatomics",id="id",
              theme = shinythemes::shinytheme("flatly"),
@@ -356,11 +353,11 @@ ui <- fluidPage(
                         ),
                         shiny::mainPanel()
                       )
-=======
-             tabPanel("Differential Enrichment",
+
+           #  tabPanel("Differential Enrichment",
                       #uiOutput("diff.gs.collection"),
-                      expDesignModule_UI(id = "gsea")
->>>>>>> 19458d7ec6d4dde13a9890e1cb98656b38b66be2
+            #          expDesignModule_UI(id = "gsea")
+
                       ),
              
              # tabPanel("Differential Enrichment", 
@@ -1606,20 +1603,15 @@ server <- function(input, output, session) {
   
   ###3 ssGSEA tab 
   
-<<<<<<< HEAD
   
   output$output.prefix <- shiny::renderUI({ 
     shiny::textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
-=======
-  ssgsea_data = reactiveValues(file = NULL)
-  output$output.prefix <- renderUI({ 
-    textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
->>>>>>> 19458d7ec6d4dde13a9890e1cb98656b38b66be2
+
   })
 
   # run the ssGSEA analysis
   #getssgseaObj = eventReactive(input$goButton,{
-<<<<<<< HEAD
+
   shiny::observeEvent(input$goButton, {
     
     shiny::validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
@@ -1630,18 +1622,6 @@ server <- function(input, output, session) {
     
     shiny::withProgress(message = 'Calculation in progress',
                  detail = 'An alert notification will appear upon download of the file', value = 1, {
-=======
-  observeEvent(input$goButton, {
-
-    validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
-    original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
-    ssgsea_data$data = as.matrix(original)
-    #ssgsea_data= imp_woNorm()
-    
-    
-    withProgress(message = 'Calculation in progress',
-                 detail = 'An alert notification will appear upon success of calculation.', value = 1, {
->>>>>>> 19458d7ec6d4dde13a9890e1cb98656b38b66be2
                    
                    ssgsea_obj = ssGSEA2(input.ds = ssgsea_data$data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
                                         weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
@@ -1649,12 +1629,9 @@ server <- function(input, output, session) {
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
                  }) 
     
-<<<<<<< HEAD
+
     shinyalert::shinyalert("File is downloaded", type = "success")                     
-=======
-    ssgsea_data$prefix = ssgsea_obj
-    shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success")                     
->>>>>>> 19458d7ec6d4dde13a9890e1cb98656b38b66be2
+
   })
   
   
@@ -1726,13 +1703,10 @@ server <- function(input, output, session) {
     
   })
   
-<<<<<<< HEAD
+
   selected_gsea.score <- shiny::reactive({
     utils::read.delim(paste("EnrichmentScore/", input$diff.gs.collection, sep = ""), stringsAsFactors=F, skip=2, row.names='Name')
-=======
-  selected_gsea.score <- reactive({
-    read.delim(paste(sessionID, "/", input$diff.gs.collection, sep = ""), stringsAsFactors = F, skip=2, row.names='Name')
->>>>>>> 19458d7ec6d4dde13a9890e1cb98656b38b66be2
+
   })
   
   output$conditional_groupingGSEA <- shiny::renderUI({
@@ -1769,7 +1743,7 @@ server <- function(input, output, session) {
     }
   })
   
-<<<<<<< HEAD
+
   shiny::observeEvent(input$expandFilterGSEA, {
     output$filter_group_gsea<- shiny::renderUI({
       shiny::selectInput(
@@ -1805,41 +1779,7 @@ server <- function(input, output, session) {
       }
     })
   },ignoreNULL = FALSE, ignoreInit = TRUE)
-=======
-  # observeEvent(input$expandFilterGSEA, {
-  #   output$filter_group_gsea<- renderUI({
-  #     selectInput(
-  #       inputId = "filter_GR_fatcorGSEA",
-  #       label = strong("Select a group to filter on"),
-  #       selected = 3,
-  #       choices = as.list(colnames(ClinData())),
-  #       multiple = FALSE,
-  #       selectize = TRUE
-  #     )
-  #   })
-   # output$filter_level_gsea <- renderUI({
-  #    req(input$filter_GR_fatcorGSEA)
-  #    if (ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='logical'){
-  #      selectizeInput(inputId = "filter_levelsGSEA",
-  #                     label = "Select one group to include in the analysis",
-  #                     choices =  ClinData() %>% pull(input$filter_GR_fatcorGSEA) %>% levels(),
-  #                     multiple = FALSE
-  #      )
-  #      
-  #    } else #if(ClinColClasses()[,input$filter_GR_fatcorGSEA]=="numeric")
-  #    {
-  #      f = ClinData() %>% pull(input$GR_fatcorGSEA)
-  #      sliderInput(
-  #        inputId = "filter_num.cutoffGSEA",
-  #        label = "Select cutoff to filter:",
-  #        min = min(f, na.rm = TRUE),
-  #        max = max(f, na.rm = TRUE),
-  #        value = colMeans(ClinData()[input$filter_GR_fatcorGSEA], na.rm = TRUE), round = T
-  #      )
-  #    }
-  #  })
-  #},ignoreNULL = FALSE, ignoreInit = TRUE)
->>>>>>> 19458d7ec6d4dde13a9890e1cb98656b38b66be2
+
   
   ClinDomitGSEA <- shiny::reactiveValues()
   
