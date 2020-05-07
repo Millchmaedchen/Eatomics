@@ -496,7 +496,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                                               filter_GR_fatcor = input$filter_GR_fatcor, 
                                               ClinData = ClinData(), 
                                               experimentalDesign = experimentalDesign, 
-                                              GR_fatcor = GR_fatcor_gsea, 
+                                              GR_fatcor = GR_fatcor, 
                                               limmaResult = limmaResult$df_up, 
                                               labelColBox = input$labelColBox)
       return(reportBlocks$boxPlotUp)
@@ -518,7 +518,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                                                 filter_GR_fatcor = input$filter_GR_fatcor, 
                                                 ClinData = ClinData, 
                                                 experimentalDesign = experimentalDesign, 
-                                                GR_fatcor = GR_fatcor_gsea, 
+                                                GR_fatcor = GR_fatcor, 
                                                 limmaResult = limmaResult$df_down, 
                                                 labelColBox = input$labelColBox)
       return(reportBlocks$boxPlotDown)
@@ -685,14 +685,14 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     reportBlocks$ExpSetup <- 
       HTML(markdownToHTML(fragment.only=TRUE, text=c( 
-        "* Input MaxQuant File:",protfile$name,
-        "* Input Clinicaldata File:",clinfile$name$name,
+        #"* Input MaxQuant File:",protfile$name,
+        #"* Input Clinicaldata File:",clinfile$name$name,
         "* Clinical grouping factor:", input$GR_fatcor_gsea,
         "* Two groups to compare:", input$levels[1],",", input$levels[2],
-        "* [Surrogate variable](http://bioconductor.org/packages/release/bioc/html/sva.html) removed:", input$remove_sv,
-        "+ Number of surrogate variables: ",surrogat$num,
-        "* Impute missing values:",input$imputeForLimma,
-        "* Apply filters:", input$expandFilter,
+       # "* [Surrogate variable](http://bioconductor.org/packages/release/bioc/html/sva.html) removed:", input$remove_sv,
+       # "+ Number of surrogate variables: ",surrogat$num,
+      #  "* Impute missing values:",input$imputeForLimma,
+        "* Apply filters:", input$expandFilter_gsea,
         " + Clinical Factor to filter: ", input$filter_GR_fatcor,
         " + One group to filter:", input$filter_levels,
         "* The samples contributing to limma are:","total",nrow(ClinDomit$designMatrix),";",input$levels[1],"(", sum(ClinDomit$designMatrix[1]),")","and",input$levels[2],"(", sum(ClinDomit$designMatrix[2]),")", 
