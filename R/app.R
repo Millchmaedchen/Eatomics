@@ -92,7 +92,6 @@ names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetD
 ui <- shiny::fluidPage( 
 sessionID = paste( "EnrichmentScore", idmaker(1), sep = "")
 dir.create(sessionID) # flush directory when session ends
-
   # Application title
   shiny::navbarPage("Eatomics",id="id",
              theme = shinythemes::shinytheme("flatly"),
@@ -329,33 +328,9 @@ dir.create(sessionID) # flush directory when session ends
                       )
              ), 
              
-             shiny::tabPanel("Differential Enrichment", 
-                      shiny::sidebarLayout(       
-                        shiny::sidebarPanel(
-                          shiny::selectInput(
-                            inputId = "diff.gs.collection", 
-                            label = strong("Enrichment scores collection"), 
-                            choices = list.files(path = "EnrichmentScore")
-                          ), 
-                          shiny::conditionalPanel(condition = "input.gsea_CinDs",
-                                           shiny::uiOutput("conditional_groupingGSEA")),
-                          shiny::conditionalPanel(condition = "input.GR_fatcorGSEA",
-                                           shiny::uiOutput("conditional_subselectGRGSEA")), 
-                          shiny::checkboxInput(inputId = "expandFilterGSEA", 
-                                        label = "Apply filters", 
-                                        FALSE), 
-                          shiny::conditionalPanel(condition = "input.expandFilterGSEA == TRUE", 
-                                           shiny::uiOutput("filter_group_gsea")),
-                          shiny::conditionalPanel( condition = "input.expandFilterGSEA == TRUE", 
-                                           shiny::uiOutput("filter_level_gsea")),
-                          shiny::actionButton(inputId = "filterGSEA", label = "Analyze", class = "btn-primary")
-                        ),
-                        shiny::mainPanel()
-                      )
-
-           #  tabPanel("Differential Enrichment",
+             shiny::tabPanel("Differential Enrichment",
                       #uiOutput("diff.gs.collection"),
-            #          expDesignModule_UI(id = "gsea")
+                      expDesignModule_UI(id = "gsea")
 
                       ),
              
@@ -1602,7 +1577,7 @@ server <- function(input, output, session) {
   
   ###3 ssGSEA tab 
   
-  
+  ssgsea_data = shiny::reactiveValues(file = NULL)
   output$output.prefix <- shiny::renderUI({ 
     shiny::textInput("output.prefix",label = "Insert a Prefix for Output Files", input$gs.collection )
 
@@ -1610,6 +1585,7 @@ server <- function(input, output, session) {
 
   # run the ssGSEA analysis
   #getssgseaObj = eventReactive(input$goButton,{
+
 
   shiny::observeEvent(input$goButton, {
     
@@ -1621,15 +1597,16 @@ server <- function(input, output, session) {
     
     shiny::withProgress(message = 'Calculation in progress',
                  detail = 'An alert notification will appear upon download of the file', value = 1, {
+
                    
                    ssgsea_obj = ssGSEA2(input.ds = ssgsea_data$data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
                                         weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
                  }) 
-    
 
-    shinyalert::shinyalert("File is downloaded", type = "success")                     
+    ssgsea_data$prefix = ssgsea_obj
+    shinyalert::shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success")                     
 
   })
   
@@ -1702,9 +1679,8 @@ server <- function(input, output, session) {
     
   })
   
-
   selected_gsea.score <- shiny::reactive({
-    utils::read.delim(paste("EnrichmentScore/", input$diff.gs.collection, sep = ""), stringsAsFactors=F, skip=2, row.names='Name')
+    utils::read.delim(paste(sessionID, "/", input$diff.gs.collection, sep = ""), stringsAsFactors = F, skip=2, row.names='Name')
 
   })
   
@@ -1742,42 +1718,39 @@ server <- function(input, output, session) {
     }
   })
   
-
-  shiny::observeEvent(input$expandFilterGSEA, {
-    output$filter_group_gsea<- shiny::renderUI({
-      shiny::selectInput(
-        inputId = "filter_GR_fatcorGSEA",
-        label = strong("Select a group to filter on"),
-        selected = 3,
-        choices = as.list(colnames(ClinData())),
-        multiple = FALSE,
-        selectize = TRUE
-      )
-    })
-    
-    
-    output$filter_level_gsea <- shiny::renderUI({
-      shiny::req(input$filter_GR_fatcorGSEA)
-      if (ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='logical'){
-        shiny::selectizeInput(inputId = "filter_levelsGSEA",
-                       label = "Select one group to include in the analysis",
-                       choices =  ClinData() %>% dplyr::pull(input$filter_GR_fatcorGSEA) %>% levels(),
-                       multiple = FALSE
-        )
-        
-      } else #if(ClinColClasses()[,input$filter_GR_fatcorGSEA]=="numeric")
-      {
-        f = ClinData() %>% dplyr::pull(input$GR_fatcorGSEA)
-        shiny::sliderInput(
-          inputId = "filter_num.cutoffGSEA",
-          label = "Select cutoff to filter:",
-          min = min(f, na.rm = TRUE),
-          max = max(f, na.rm = TRUE),
-          value = colMeans(ClinData()[input$filter_GR_fatcorGSEA], na.rm = TRUE), round = T
-        )
-      }
-    })
-  },ignoreNULL = FALSE, ignoreInit = TRUE)
+  # shiny::observeEvent(input$expandFilterGSEA, {
+  #   output$filter_group_gsea<- renderUI({
+  #     shiny::selectInput(
+  #       inputId = "filter_GR_fatcorGSEA",
+  #       label = strong("Select a group to filter on"),
+  #       selected = 3,
+  #       choices = as.list(colnames(ClinData())),
+  #       multiple = FALSE,
+  #       selectize = TRUE
+  #     )
+  #   })
+   # output$filter_level_gsea <- shiny::renderUI({
+  #    shiny::req(input$filter_GR_fatcorGSEA)
+  #    if (ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='logical'){
+  #      shiny::selectizeInput(inputId = "filter_levelsGSEA",
+  #                     label = "Select one group to include in the analysis",
+  #                     choices =  ClinData() %>% pull(input$filter_GR_fatcorGSEA) %>% levels(),
+  #                     multiple = FALSE
+  #      )
+  #      
+  #    } else #if(ClinColClasses()[,input$filter_GR_fatcorGSEA]=="numeric")
+  #    {
+  #      f = ClinData() %>% dplyr::pull(input$GR_fatcorGSEA)
+  #      shiny::sliderInput(
+  #        inputId = "filter_num.cutoffGSEA",
+  #        label = "Select cutoff to filter:",
+  #        min = min(f, na.rm = TRUE),
+  #        max = max(f, na.rm = TRUE),
+  #        value = colMeans(ClinData()[input$filter_GR_fatcorGSEA], na.rm = TRUE), round = T
+  #      )
+  #    }
+  #  })
+  #},ignoreNULL = FALSE, ignoreInit = TRUE)
 
   
   ClinDomitGSEA <- shiny::reactiveValues()
