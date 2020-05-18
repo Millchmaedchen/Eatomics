@@ -88,10 +88,10 @@ source(paste(homeDir, '/expDesignModule.R', sep = ""))
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
 
-
-ui <- shiny::fluidPage( 
 sessionID = paste( "EnrichmentScore", idmaker(1), sep = "")
 dir.create(sessionID) # flush directory when session ends
+
+ui <- shiny::fluidPage( 
   # Application title
   shiny::navbarPage("Eatomics",id="id",
              theme = shinythemes::shinytheme("flatly"),
@@ -599,7 +599,7 @@ server <- function(input, output, session) {
       check_table = t(as.matrix(check_table))
       check_table <- check_table[ , which(apply(check_table, 2, var) != 0)]
       message("calculating prcomp (again)")
-      cc<-stats::prcomp(data.table::na.omit(check_table),
+      cc<-stats::prcomp(stats::na.omit(check_table),
                  scale. =TRUE, 
                  center = TRUE
       )
@@ -697,7 +697,7 @@ server <- function(input, output, session) {
     
     distributionPlot_input <- shiny::reactive({
       original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
-      EGAD::plot_distribution(original)
+      plot_distribution(original)
     })
     
     output$distributionPlot <- shiny::renderPlot({
@@ -990,10 +990,10 @@ server <- function(input, output, session) {
                         skip_empty_rows = TRUE, 
                         locale = locale(decimal_mark = ",") # Todo: uncomment this for US/English seperator
     ) %>% janitor::remove_empty("cols") %>% dplyr::mutate_if(is.character, as.factor) %>% dplyr::mutate_if(is.logical, as.factor)
-    # if(protfile$protfile$name == "proteinGroups.freeze.txt"){ ### TODO: Uncomment for public use!
-    #   ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
-    #   ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
-    # }
+     if(protfile$protfile$name == "proteinGroups.freeze.txt"){ ### TODO: Uncomment for public use!
+       ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
+       ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
+     }
     ClinDomit$data = ClinData %>% janitor::clean_names()
     ClinData
   })
@@ -1230,14 +1230,14 @@ server <- function(input, output, session) {
     ##select upregulated dataframe
     
     limmaResult$upregulated = as.factor(gene_list$logFC >= input$logFC & gene_list$adj.P.Val <= input$adj.P.Val)
-    limmaResult$up<-data.table::na.omit(gene_list[limmaResult$upregulated=="TRUE",])
+    limmaResult$up <- stats::na.omit(gene_list[limmaResult$upregulated=="TRUE",])
     limmaResult$df_up <- limmaResult$up %>% tibble::rownames_to_column("Gene.name")
     
     ##select down regulated dataframe
     
     limmaResult$downregulated= as.factor(gene_list$logFC <= (-input$logFC) & gene_list$adj.P.Val <= input$adj.P.Val)
-    limmaResult$down<-data.table::na.omit(gene_list[ limmaResult$downregulated =="TRUE",])
-    limmaResult$df_down<-limmaResult$down %>% tibble::rownames_to_column("Gene.name")
+    limmaResult$down <- stats::na.omit(gene_list[ limmaResult$downregulated =="TRUE",])
+    limmaResult$df_down <- limmaResult$down %>% tibble::rownames_to_column("Gene.name")
     
     
     reportBlocks$volcano_plot<-limma_input()
@@ -1293,7 +1293,7 @@ server <- function(input, output, session) {
       experimentalDesign = ClinDomit$designMatrix[,1:2] %>% tibble::rownames_to_column(var = "PatientID") %>% tidyr::gather(key= group, value = value, -PatientID ) %>% dplyr::filter(value > 0) %>% dplyr::select(-value) #%>% left_join(., ClinData()[, c("PatientID", input$filter_GR_fatcor, input$labelColBox)])
       ClinData = ClinData()
       GR_fatcor = "group"
-      reportBlocks$boxPlotUp = toaster::createBoxPlot( rows_selected = input$up_rows_selected, 
+      reportBlocks$boxPlotUp = createBoxPlot( rows_selected = input$up_rows_selected, 
                                               proteinData = original, 
                                               filter_GR_fatcor = input$filter_GR_fatcor, 
                                               ClinData = ClinData(), 
@@ -1509,71 +1509,116 @@ server <- function(input, output, session) {
                     reportBlocks$ExpSetup)
   })
   
-  
-  
   output$report <- shiny::downloadHandler(
     # For PDF output, change this to "report.pdf"
-    #filename = "report.pdf",
-    filename = "report.html",
-    
-    content = function(filename) {
+    filename = paste('EatomicsReport-', Sys.Date(), '.html', sep = ''),
+    content = function(file) {
       # Copy the report file to a temporary directory before processing it, in
       # case we don't have write permissions to the current working dir (which
       # can happen when deployed).
-    
+      tempReport <- file.path(tempdir(), "report.Rmd")
+      file.copy("report.Rmd", tempReport, overwrite = TRUE)
       
       # Set up parameters to pass to Rmd document
       params <- list(
-        pca = QCreport$pca,
-        TSdetect = QCreport$TSdetect,
-        #norm = QCreport$norm,
-        number= QCreport$number,
-        coverage = QCreport$coverage,
-        missval = QCreport$missval,
-        detect = QCreport$detect,
-        impute = QCreport$impute,
-        StSheatmap = QCreport$StSheatmap,
-        StSheatmapDistMetric = QCreport$StSDistMetric,
-        cumsum =QCreport$cumsum,
-        linesFromMaxQuant = reportBlocks$linesFromMaxQuant,
-        stats_proteinGroups = reportBlocks$stats_proteinGroups,
-        volcano_plot = reportBlocks$volcano_plot,
-        boxPlotUp = reportBlocks$boxPlotUp,
-        boxPlotDown = reportBlocks$boxPlotDown,
-        ExpSetup = reportBlocks$ExpSetup,
-        UpRegul = limmaResult$df_up,
-        DoRegul = limmaResult$df_down,
-        gsea_volcano_plot=reportBlocks$gsea_volcano_plot,
-        gseaSetup = reportBlocks$gseaSetup,
-        gseaUpRegul = gsea_regul$up,
-        gseaDoRegul = gsea_regul$down,
-        separateValuesGSEA = reportBlocks$separateValuesGSEA
-      )
-      
-      shiny::withProgress(message = 'Generating Report', {
-        for (i in 1:15) {
-          incProgress(1/15)
-          Sys.sleep(0.25)
-        }
-      })
+              pca = QCreport$pca,
+              TSdetect = QCreport$TSdetect,
+              #norm = QCreport$norm,
+              number= QCreport$number,
+              coverage = QCreport$coverage,
+              missval = QCreport$missval,
+              detect = QCreport$detect,
+              impute = QCreport$impute,
+              StSheatmap = QCreport$StSheatmap,
+              StSheatmapDistMetric = QCreport$StSDistMetric,
+              cumsum =QCreport$cumsum,
+              linesFromMaxQuant = reportBlocks$linesFromMaxQuant,
+              stats_proteinGroups = reportBlocks$stats_proteinGroups,
+              volcano_plot = reportBlocks$volcano_plot,
+              boxPlotUp = reportBlocks$boxPlotUp,
+              boxPlotDown = reportBlocks$boxPlotDown,
+              ExpSetup = reportBlocks$ExpSetup,
+              UpRegul = limmaResult$df_up,
+              DoRegul = limmaResult$df_down,
+              gsea_volcano_plot=reportBlocks$gsea_volcano_plot,
+              gseaSetup = reportBlocks$gseaSetup,
+              gseaUpRegul = gsea_regul$up,
+              gseaDoRegul = gsea_regul$down,
+              separateValuesGSEA = reportBlocks$separateValuesGSEA
+              )
       
       # Knit the document, passing in the `params` list, and eval it in a
       # child of the global environment (this isolates the code in the document
       # from the code in this app).
-      rmarkdown::render(input = "report.Rmd", 
-                      output_file = paste('EatomicsReport_', Sys.time(), '.html', sep = ''),
-                       output_dir  = getwd(),
-                       clean = TRUE,
-                       quiet = TRUE, 
+      rmarkdown::render(tempReport, output_file = file,
                         params = params,
                         envir = new.env(parent = globalenv())
       )
-      
-      
-      #uploadName = paste('EatomicsReport-', Sys.Date(), Sys.time(), '.html', sep = '')
-      #drive_upload("report.html", name = uploadName)
     }
-  )
+  ) 
+  
+  # output$report <- shiny::downloadHandler(
+  #   # For PDF output, change this to "report.pdf"
+  #   #filename = "report.pdf",
+  #   filename = "report.html",
+  #   
+  #   content = function(filename) {
+  #     # Copy the report file to a temporary directory before processing it, in
+  #     # case we don't have write permissions to the current working dir (which
+  #     # can happen when deployed).
+  #   
+  #     
+  #     # Set up parameters to pass to Rmd document
+  #     params <- list(
+  #       pca = QCreport$pca,
+  #       TSdetect = QCreport$TSdetect,
+  #       #norm = QCreport$norm,
+  #       number= QCreport$number,
+  #       coverage = QCreport$coverage,
+  #       missval = QCreport$missval,
+  #       detect = QCreport$detect,
+  #       impute = QCreport$impute,
+  #       StSheatmap = QCreport$StSheatmap,
+  #       StSheatmapDistMetric = QCreport$StSDistMetric,
+  #       cumsum =QCreport$cumsum,
+  #       linesFromMaxQuant = reportBlocks$linesFromMaxQuant,
+  #       stats_proteinGroups = reportBlocks$stats_proteinGroups,
+  #       volcano_plot = reportBlocks$volcano_plot,
+  #       boxPlotUp = reportBlocks$boxPlotUp,
+  #       boxPlotDown = reportBlocks$boxPlotDown,
+  #       ExpSetup = reportBlocks$ExpSetup,
+  #       UpRegul = limmaResult$df_up,
+  #       DoRegul = limmaResult$df_down,
+  #       gsea_volcano_plot=reportBlocks$gsea_volcano_plot,
+  #       gseaSetup = reportBlocks$gseaSetup,
+  #       gseaUpRegul = gsea_regul$up,
+  #       gseaDoRegul = gsea_regul$down,
+  #       separateValuesGSEA = reportBlocks$separateValuesGSEA
+  #     )
+  #     
+  #     shiny::withProgress(message = 'Generating Report', {
+  #       for (i in 1:15) {
+  #         incProgress(1/15)
+  #         Sys.sleep(0.25)
+  #       }
+  #     })
+  #     #uploadName = paste('EatomicsReport-', Sys.Date(), Sys.time(), '.html', sep = '')
+  #     #drive_upload("report.html", name = uploadName)
+  #     
+  #     # Knit the document, passing in the `params` list, and eval it in a
+  #     # child of the global environment (this isolates the code in the document
+  #     # from the code in this app).
+  #     rmarkdown::render(input = "report.Rmd", 
+  #                     output_file = paste('EatomicsReport_', Sys.time(), '.html', sep = ''),
+  #                      output_dir  = getwd(),
+  #                      clean = TRUE,
+  #                      quiet = TRUE, 
+  #                       params = params,
+  #                       envir = new.env(parent = globalenv())
+  #     )
+  #     
+  #   }
+  # )
   
   ###3 ssGSEA tab 
   
@@ -1765,7 +1810,7 @@ server <- function(input, output, session) {
     } else{
       design_table<-as.data.frame(cbind(ClinData() %>% dplyr:: select(PatientID), ClinData()[input$GR_fatcorGSEA]<= input$num.cutoffGSEA,ClinData()[input$GR_fatcorGSEA]>input$num.cutoffGSEA))
       colnames(design_table) <- make.names(c('PatientID', paste('less than or equal to',input$num.cutoffGSEA, sep='_'), paste('greater than',input$num.cutoffGSEA,sep='_')))
-      ClinDomitGSEA$data <- data.table::na.omit(design_table)
+      ClinDomitGSEA$data <- stats::na.omit(design_table)
     }
     
     if (input$expandFilterGSEA==TRUE){
@@ -1780,7 +1825,7 @@ server <- function(input, output, session) {
       }
       if (!is.null(Ind)){
         CD = ClinDomitGSEA$data
-        CD =data.table::na.omit(CD[Ind,])
+        CD = stats::na.omit(CD[Ind,])
         ClinDomitGSEA$data <- CD
         
       }
@@ -1911,14 +1956,14 @@ server <- function(input, output, session) {
     gsea_up = input$up_gsea_selected
     t.test_list$upregulated = as.factor(t.test_list$log_ratio> 0 & t.test_list$p.value < 0.05/nrow(t.test_list))
     
-    gsea_regul$up<-data.table::na.omit( t.test_list[ t.test_list$upregulated =="TRUE",])
+    gsea_regul$up <- stats::na.omit( t.test_list[ t.test_list$upregulated =="TRUE",])
     gsea_regul$df_up<- gsea_regul$up %>% dplyr::rename("Geneset (upregulated)"= "Gene Set" )
     
     ##select down regulated dataframe
     gsea_down = input$down_gsea_selected
     t.test_list$downregulated = as.factor(t.test_list$log_ratio < 0 & t.test_list$p.value < 0.05/nrow(t.test_list))
     
-    gsea_regul$down<-data.table::na.omit( t.test_list[ t.test_list$downregulated =="TRUE",])
+    gsea_regul$down <- stats::na.omit( t.test_list[ t.test_list$downregulated =="TRUE",])
     gsea_regul$df_down<- gsea_regul$down %>% dplyr::rename("Geneset (downregulated)"= "Gene Set" )
     reportBlocks$gsea_volcano_plot<-diffgsea_input()
     
