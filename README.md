@@ -3,7 +3,7 @@ Eatomics is a web application developed using Shiny. Eatomics enables fast explo
 
 # Getting started
 ## Install Rstudio
-If you havn't installed Rstudio yet, please find the installation for your distribution at https://rstudio.com/products/rstudio/download/
+If you do not have installed Rstudio yet, please find the installation for your distribution at https://rstudio.com/products/rstudio/download/
 ## Run Shiny App in Rstudio
 Within R studio please run
 
