@@ -10,8 +10,11 @@ Within R studio please run
 ```
 install.packages("shiny")
 install.packages("devtools")
+install.packages("pacman")
+
 library(shiny)
 library(devtools)
+library(pacman)
 
 runUrl("https://github.com/Millchmaedchen/Eatomics/archive/master.zip", subdir = "R")
 ```
@@ -25,11 +28,6 @@ Two demo data files are downloaded when the above runUrl() command is used. You 
 - R version < 3.6 will need a lower version of caTools in order to create proper reports from rmarkdown - this might help to fix any caTools related errors.
 ```
 install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools_1.14.tar.gz", repos=NULL, type="source")
-```
-
-- PCA plot depends on a package called biplot, which can be installed via 
-```
-install_github("vqv/ggbiplot")
 ```
 
 # References
