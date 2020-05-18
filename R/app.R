@@ -34,7 +34,7 @@ p_load("ggplot2")
 p_load("gridExtra")
 p_load("ggthemes")
 #install_github("vqv/ggbiplot")
-library(ggbiplot)
+#library(ggbiplot)
 #p_load("ggiraph")
 p_load("autoplotly")
 #p_load("EnhancedVolcano")
@@ -88,10 +88,14 @@ source(paste(homeDir, '/expDesignModule.R', sep = ""))
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
 
+
 sessionID = paste( "EnrichmentScore", idmaker(1), sep = "")
 dir.create(sessionID) # flush directory when session ends
 
+
 ui <- shiny::fluidPage( 
+
+
   # Application title
   shiny::navbarPage("Eatomics",id="id",
              theme = shinythemes::shinytheme("flatly"),
@@ -419,7 +423,9 @@ server <- function(input, output, session) {
       return(NULL)
     
     protfile$protfile <- inFile
-    proteinGroups = readr::read_tsv(inFile$datapath, col_types = cols(Reverse = "c", `Potential contaminant` = "c", `Only identified by site` = "c"))
+    #inFile$datapath = "/home/milena/Milena/Eatomics/R/ssGSEA_evaluation/proteinGroups.txt"
+    proteinGroups = read_tsv(inFile$datapath, col_types = cols(Reverse = "c", `Potential contaminant` = "c", `Only identified by site` = "c"))
+
     stats_proteinGroups = NULL
     stats_proteinGroups$NumFullProt = nrow(proteinGroups)
     stats_proteinGroups$NumPotCon = proteinGroups %>% 
@@ -599,7 +605,8 @@ server <- function(input, output, session) {
       check_table = t(as.matrix(check_table))
       check_table <- check_table[ , which(apply(check_table, 2, var) != 0)]
       message("calculating prcomp (again)")
-      cc<-stats::prcomp(stats::na.omit(check_table),
+
+      cc<-stats::prcomp(na.omit(check_table),
                  scale. =TRUE, 
                  center = TRUE
       )
@@ -610,40 +617,48 @@ server <- function(input, output, session) {
     
     output$pca_input_samples <- shiny::renderPlot({
       shiny::validate(
-        need(length(input$PCs) == 2, "Please select exactly two principal components for plotting.")
+        need(length(input$PCs) == 2, "Please select two principal components for plotting.")
       )
       cc <- pca_input_samples()
+      dummy = as.data.frame(cc$x) %>% rownames_to_column("PatientID")
       if (is.null(input$labelCol) | input$labelCol == "" | input$labelCol=="none" ) {
         groups = NULL
-        labels = rownames(cc$x)
+        labels = "PatientID"
         
       } else if (!is.null(input$labelCol) && input$labelCol != "PatientID") {
         message(input$labelCol)
-        pcaSamples = tibble(PatientID = rownames(cc$x))
-        pcaSamples$PatientID = gsub(pattern = "\\.", replacement = " ", x = pcaSamples$PatientID)
-        pcaSamples$PatientID <- readr::parse_factor(pcaSamples$PatientID, include_na = FALSE)
-        coloringFactor = ClinData()[,c("PatientID", input$labelCol)]
-        groups = dplyr::pull(dplyr::right_join(coloringFactor, pcaSamples)[,2])
-        labels = NULL
+        dummy = dummy %>% left_join(., dplyr::select(ClinData(), PatientID, groups = input$labelCol))
+        #pcaSamples$PatientID = gsub(pattern = "\\.", replacement = " ", x = pcaSamples$PatientID)
+        #pcaSamples$PatientID <- readr::parse_factor(pcaSamples$PatientID, include_na = FALSE)
+        #coloringFactor = ClinData()[,c("PatientID", input$labelCol)]
+        #groups = dplyr::pull(dplyr::right_join(coloringFactor, pcaSamples)[,2])
+        #labels = NULL
       }  else {
         message("Please select a different parameter for colouring")
         groups = NULL
-        labels = rownames(cc$x)
+        labels = "PatientID"
       }
       ellipse = TRUE
       if (is.numeric(groups)){
         ellipse = FALSE
       }
+
+      biplot = ggplot(dummy, aes_string(x = "PC1", y = "PC2")) + 
+        geom_point(aes(color = groups)) 
+      if (ellipse == TRUE) {
+        biplot = biplot + 
+          stat_ellipse(aes(group = groups, color = groups))
+      }
       
-      biplot <- ggbiplot::ggbiplot(cc, choices = as.numeric(input$PCs), 
-                         var.scale=1, 
-                         obs.scale=1, 
-                         var.axes=F, 
-                         scale = 1, 
-                         groups = groups,
-                         labels = labels,
-                         ellipse = ellipse
-      ) 
+      #biplot <- ggbiplot::ggbiplot(cc, choices = as.numeric(input$PCs), 
+      #                   var.scale=1, 
+      #                   obs.scale=1, 
+      #                   var.axes=F, 
+      #                   scale = 1, 
+      #                   groups = groups,
+      #                   labels = labels,
+      #                   ellipse = ellipse
+     # ) 
       biplot <- biplot + 
         ggplot2::ggtitle("Principal component analysis") +
         ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
@@ -817,7 +832,8 @@ server <- function(input, output, session) {
     })
     output$StS_heatmap <- shiny::renderPlot({
       QCreport$StSDistMetric = input$distanceMetric
-      QCreport$StSheatmap<-StSheatmap_input()
+      QCreport$StSheatmap <- StSheatmap_input()
+      StSheatmap_input()
     })
     output$downloadStS_heatmap <- shiny::downloadHandler(
       filename = "StS_heatmap.pdf",
@@ -1230,14 +1246,14 @@ server <- function(input, output, session) {
     ##select upregulated dataframe
     
     limmaResult$upregulated = as.factor(gene_list$logFC >= input$logFC & gene_list$adj.P.Val <= input$adj.P.Val)
-    limmaResult$up <- stats::na.omit(gene_list[limmaResult$upregulated=="TRUE",])
+    limmaResult$up <- na.omit(gene_list[limmaResult$upregulated=="TRUE",])
     limmaResult$df_up <- limmaResult$up %>% tibble::rownames_to_column("Gene.name")
     
     ##select down regulated dataframe
     
     limmaResult$downregulated= as.factor(gene_list$logFC <= (-input$logFC) & gene_list$adj.P.Val <= input$adj.P.Val)
-    limmaResult$down <- stats::na.omit(gene_list[ limmaResult$downregulated =="TRUE",])
-    limmaResult$df_down <- limmaResult$down %>% tibble::rownames_to_column("Gene.name")
+    limmaResult$down <- na.omit(gene_list[ limmaResult$downregulated =="TRUE",])
+    limmaResult$df_down<-limmaResult$down %>% tibble::rownames_to_column("Gene.name")
     
     
     reportBlocks$volcano_plot<-limma_input()
@@ -1810,7 +1826,8 @@ server <- function(input, output, session) {
     } else{
       design_table<-as.data.frame(cbind(ClinData() %>% dplyr:: select(PatientID), ClinData()[input$GR_fatcorGSEA]<= input$num.cutoffGSEA,ClinData()[input$GR_fatcorGSEA]>input$num.cutoffGSEA))
       colnames(design_table) <- make.names(c('PatientID', paste('less than or equal to',input$num.cutoffGSEA, sep='_'), paste('greater than',input$num.cutoffGSEA,sep='_')))
-      ClinDomitGSEA$data <- stats::na.omit(design_table)
+      ClinDomitGSEA$data <- na.omit(design_table)
+
     }
     
     if (input$expandFilterGSEA==TRUE){
@@ -1825,7 +1842,7 @@ server <- function(input, output, session) {
       }
       if (!is.null(Ind)){
         CD = ClinDomitGSEA$data
-        CD = stats::na.omit(CD[Ind,])
+        CD = na.omit(CD[Ind,])
         ClinDomitGSEA$data <- CD
         
       }
@@ -1956,13 +1973,14 @@ server <- function(input, output, session) {
     gsea_up = input$up_gsea_selected
     t.test_list$upregulated = as.factor(t.test_list$log_ratio> 0 & t.test_list$p.value < 0.05/nrow(t.test_list))
     
+
     gsea_regul$up <- stats::na.omit( t.test_list[ t.test_list$upregulated =="TRUE",])
     gsea_regul$df_up<- gsea_regul$up %>% dplyr::rename("Geneset (upregulated)"= "Gene Set" )
     
     ##select down regulated dataframe
     gsea_down = input$down_gsea_selected
     t.test_list$downregulated = as.factor(t.test_list$log_ratio < 0 & t.test_list$p.value < 0.05/nrow(t.test_list))
-    
+
     gsea_regul$down <- stats::na.omit( t.test_list[ t.test_list$downregulated =="TRUE",])
     gsea_regul$df_down<- gsea_regul$down %>% dplyr::rename("Geneset (downregulated)"= "Gene Set" )
     reportBlocks$gsea_volcano_plot<-diffgsea_input()
