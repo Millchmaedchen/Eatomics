@@ -95,7 +95,6 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   })
   
   ClinColClasses <- reactive({
-    browser()
     req(ClinData())
     ClinDomit$data = ClinData() %>% janitor::clean_names()
     df = ClinData()
@@ -309,7 +308,6 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         dplyr::filter(!!sym(filterParameter) %in% !!input$filter_levels) %>% 
         select(-filterParameter)
     } else {
-      browser()
       ClinData = ClinDomit$data %>% 
         janitor::clean_names() %>% 
         dplyr::select(patient_id, mainParameter, covariates) %>% 
