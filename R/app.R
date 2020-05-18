@@ -417,6 +417,7 @@ server <- function(input, output, session) {
       return(NULL)
     
     protfile$protfile <- inFile
+    #inFile$datapath = "/home/milena/Milena/Eatomics/R/ssGSEA_evaluation/proteinGroups.txt"
     proteinGroups = read_tsv(inFile$datapath, col_types = cols(Reverse = "c", `Potential contaminant` = "c", `Only identified by site` = "c"))
     stats_proteinGroups = NULL
     stats_proteinGroups$NumFullProt = nrow(proteinGroups)
@@ -815,7 +816,8 @@ server <- function(input, output, session) {
     })
     output$StS_heatmap <- renderPlot({
       QCreport$StSDistMetric = input$distanceMetric
-      QCreport$StSheatmap<-StSheatmap_input()
+      QCreport$StSheatmap <- StSheatmap_input()
+      StSheatmap_input()
     })
     output$downloadStS_heatmap <- downloadHandler(
       filename = "StS_heatmap.pdf",
