@@ -16,3 +16,8 @@ install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools
 install_github("vqv/ggbiplot")
 - as for this repository, devtools needs to be installed as well 
 install.packages("devtools)
+
+# References
+
+1. Krug, Karsten, et al. "A curated resource for phosphosite-specific signature analysis." Molecular & cellular proteomics 18.3 (2019): 576-593. - describes ssGSEA 2.0, which is re-used in this repository
+2. Ritchie, Matthew E., et al. "limma powers differential expression analyses for RNA-sequencing and microarray studies." Nucleic acids research 43.7 (2015): e47-e47. - describes limma, which is needed for the core functionality of differential expression analysis
