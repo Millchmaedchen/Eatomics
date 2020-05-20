@@ -4,71 +4,60 @@
 # You can run the application by clicking
 # the 'Run App' button above.
 
-# Install or load neccessary R packages 
-#install.packages("pacman") # for easy install and update #+#
-library(pacman) #+#
-
+# Set Repositories for correct installation of all dependencies/packages
 setRepositories(ind = c(1:6, 8))
 
-#p_load("rstudioapi")
+# Install or load neccessary R packages 
+list_of_packages = c("shiny","shinythemes", 'shinycssloaders', "shinyalert", 'shinyFiles', "shinyWidgets", "shinyBS", "openxlsx", "pheatmap", "RColorBrewer", "plotly", "ggplot2",
+                     "gridExtra", "ggthemes", "autoplotly", "kableExtra", "ggrepel", "gtools", "verification", "https://cran.r-project.org/src/contrib/Archive/janitor/janitor_1.2.1.tar.gz", "tidyverse", "broom", "imputeLCMD", "modelr", "limma", "markdown")
 
-# Shiny libraries
-p_load("shiny") #+#
-p_load("shinythemes")
-p_load('shinycssloaders')
-p_load("shinyalert")
-p_load('shinyFiles')
-p_load("shinyWidgets")
-p_load("shinyBS")
+lapply(list_of_packages, 
+       function(x) if(!require(x,character.only = TRUE)) install.packages(x, dependencies = TRUE))
 
-# Load data
-#p_load("readxl")
-#p_load("readr")
-p_load(openxlsx)
-
-# Visualization
-p_load("pheatmap")
-p_load("RColorBrewer")
-p_load("plotly")
-p_load("ggplot2")
-p_load("gridExtra")
-p_load("ggthemes")
-#install_github("vqv/ggbiplot")
-#library(ggbiplot)
-#p_load("ggiraph")
-p_load("autoplotly")
-#p_load("EnhancedVolcano")
-p_load(kableExtra)
-p_load("ggrepel")
-p_load("gtools")
+#install.packages("pacman") # for easy install and update #+#
+#library(pacman) #+#
 
 
-# Tidy data
-p_load("tidyverse")
-#p_load("dplyr")
-#p_load("data.table")
-#p_load(DT)
-p_load("janitor")
-#p_load(broom)
-
-# Analysis logic
-#p_load("sva")
-p_load("imputeLCMD")
-p_load("modelr")
-p_load("limma")
-
-# Report
-p_load(markdown)
-
-## no clue
-#p_load("stringi")
-#p_load("rgl")
-#p_load("crosstalk")
-#p_load("markdown")
-#p_load(xtable)
-#p_load("rlang")
-#p_load(nlme)
-
+# #p_load("rstudioapi")
+# 
+# # Shiny libraries
+# p_load("shiny") #+#
+# p_load("shinythemes")
+# p_load('shinycssloaders')
+# p_load("shinyalert")
+# p_load('shinyFiles')
+# p_load("shinyWidgets")
+# p_load("shinyBS")
+# 
+# # Load data
+# p_load(openxlsx)
+# 
+# # Visualization
+# p_load("pheatmap")
+# p_load("RColorBrewer")
+# p_load("plotly")
+# p_load("ggplot2")
+# p_load("gridExtra")
+# p_load("ggthemes")
+# p_load("autoplotly")
+# p_load("kableExtra")
+# p_load("ggrepel")
+# p_load("gtools")
+# 
+# 
+# # Tidy data
+# p_load("janitor")
+# p_load("tidyverse")
+# p_load("broom")
+# 
+# # Analysis logic
+# #p_load("sva")
+# p_load("imputeLCMD")
+# p_load("modelr")
+# p_load("limma")
+# 
+# # Report
+# p_load("markdown")
 
 # Needed for server setup
 #p_load("RJDBC")
@@ -88,13 +77,13 @@ source(paste(homeDir, '/expDesignModule.R', sep = ""))
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
 
-
-sessionID = paste( "EnrichmentScore", idmaker(1), sep = "")
-dir.create(sessionID) # flush directory when session ends
+#Change for multi-user implementation
+#sessionID = paste( "EnrichmentScores_User", idmaker(1), sep = "")
+#dir.create(sessionID) # flush directory when session ends
+sessionID = paste(homeDir,"/../Data/EnrichmentScores_User", sep = "")
 
 
 ui <- shiny::fluidPage( 
-
 
   # Application title
   shiny::navbarPage("Eatomics",id="id",
@@ -146,8 +135,8 @@ ui <- shiny::fluidPage(
                                               shiny::tabPanel(title = "PCA",
                                                       shiny::selectizeInput("PCs",
                                                                       label = "Choose the principal components for plotting",
-                                                                      choices = list("PC1" = 1, "PC2" = 2, "PC3" = 3, "PC4" = 4, "PC5" = 5, "PC6" = 6, "PC7" = 7, "PC8" = 8),
-                                                                      selected = c(1, 2), 
+                                                                      choices = list("PC1" = "PC1", "PC2" = "PC2", "PC3" = "PC3", "PC4" = "PC4", "PC5" = "PC5", "PC6" = "PC6", "PC7" = "PC7", "PC8" = "PC8"),
+                                                                      selected = c("PC1", "PC1"), 
                                                                       multiple = TRUE, 
                                                                       options = list(maxItems = 2)
                                                        ),
@@ -337,41 +326,7 @@ ui <- shiny::fluidPage(
                       expDesignModule_UI(id = "gsea")
 
                       ),
-             
-             # tabPanel("Differential Enrichment", 
-             #          sidebarLayout(       
-             #            sidebarPanel(
-             #              selectInput(
-             #                inputId = "diff.gs.collection", 
-             #                label = strong("Enrichment scores collection"), 
-             #                choices = list.files(path = paste(sessionID, "/", sep = ""))
-             #              ), 
-             #              conditionalPanel(condition = "input.gsea_CinDs",
-             #                               uiOutput("conditional_groupingGSEA")),
-             #              conditionalPanel(condition = "input.GR_fatcorGSEA",
-             #                               uiOutput("conditional_subselectGRGSEA")), 
-             #              checkboxInput(inputId = "expandFilterGSEA", 
-             #                            label = "Apply filters", 
-             #                            FALSE), 
-             #              conditionalPanel(condition = "input.expandFilterGSEA == TRUE", 
-             #                               uiOutput("filter_group_gsea")),
-             #              conditionalPanel( condition = "input.expandFilterGSEA == TRUE", 
-             #                               uiOutput("filter_level_gsea")),
-             #              actionButton(inputId = "filterGSEA", label = "Analyze", class = "btn-primary")
-             #            ),
-             #            mainPanel()
-             #          )
-             #          ),
 
-             
-             #  navbarMenu("Help",icon = icon("info-circle"),
-             #             tabPanel("Quick Tour"),
-             #             tabPanel("Go to vignette",
-             #                     
-             #                       sprintf("window.open('http://bioconductor.org/packages/%s/bioc/vignettes/iSEE/inst/doc/basic.html', '_blank')")
-             #                      
-             #             )
-             #  )
             shiny::tabPanel("About",icon = icon("info-circle"),
                       # actionButton(
                       #   "tour_firststeps", "Click me for a quick tour",
@@ -632,39 +587,31 @@ server <- function(input, output, session) {
         #pcaSamples$PatientID <- readr::parse_factor(pcaSamples$PatientID, include_na = FALSE)
         #coloringFactor = ClinData()[,c("PatientID", input$labelCol)]
         #groups = dplyr::pull(dplyr::right_join(coloringFactor, pcaSamples)[,2])
-        #labels = NULL
+        labels = "PatientID"
       }  else {
         message("Please select a different parameter for colouring")
         groups = NULL
         labels = "PatientID"
       }
       ellipse = TRUE
-      if (is.numeric(groups)){
+      if (is.numeric(dummy$groups)){
         ellipse = FALSE
       }
 
-      biplot = ggplot(dummy, aes_string(x = "PC1", y = "PC2")) + 
+      biplot = ggplot(dummy, aes_string(x = input$PCs[1], y = input$PCs[2])) + 
         geom_point(aes(color = groups)) 
       if (ellipse == TRUE) {
         biplot = biplot + 
           stat_ellipse(aes(group = groups, color = groups))
       }
-      
-      #biplot <- ggbiplot::ggbiplot(cc, choices = as.numeric(input$PCs), 
-      #                   var.scale=1, 
-      #                   obs.scale=1, 
-      #                   var.axes=F, 
-      #                   scale = 1, 
-      #                   groups = groups,
-      #                   labels = labels,
-      #                   ellipse = ellipse
-     # ) 
+
       biplot <- biplot + 
         ggplot2::ggtitle("Principal component analysis") +
         ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+        ggrepel::geom_text_repel(aes_string(label=labels), show.legend = F, size = 4) +
         #scale_fill_continuous(na.value="white") + 
         ggplot2::theme_light()
-      if (is.numeric(groups)){
+      if (is.numeric(dummy$groups)){
         biplot  = biplot + ggthemes::scale_color_continuous_tableau("Red-Gold",na.value = "grey30") 
       } else {
         biplot  = biplot + ggthemes::scale_color_tableau()
@@ -1652,7 +1599,7 @@ server <- function(input, output, session) {
     
     shiny::validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
-    ssgsea_data = as.matrix(original)
+    ssgsea_data$data = as.matrix(original)
     #ssgsea_data= imp_woNorm()
     
     

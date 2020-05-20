@@ -93,9 +93,9 @@ ssGSEA2 <- function (
   
   ## ###################################################
   ## Load libraries
-  p_load(gtools)
-  p_load(verification)
-  p_load(RColorBrewer)
+ # p_load(gtools)
+#  p_load(verification)
+#  p_load(RColorBrewer)
   
   ## ####################################################
   ##            import dataset
