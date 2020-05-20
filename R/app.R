@@ -4,71 +4,60 @@
 # You can run the application by clicking
 # the 'Run App' button above.
 
-# Install or load neccessary R packages 
-#install.packages("pacman") # for easy install and update #+#
-library(pacman) #+#
-
+# Set Repositories for correct installation of all dependencies/packages
 setRepositories(ind = c(1:6, 8))
 
-#p_load("rstudioapi")
+# Install or load neccessary R packages 
+list_of_packages = c("shiny","shinythemes", 'shinycssloaders', "shinyalert", 'shinyFiles', "shinyWidgets", "shinyBS", "openxlsx", "pheatmap", "RColorBrewer", "plotly", "ggplot2",
+                     "gridExtra", "ggthemes", "autoplotly", "kableExtra", "ggrepel", "gtools", "https://cran.r-project.org/src/contrib/Archive/janitor/janitor_1.2.1.tar.gz", "tidyverse", "broom", "imputeLCMD", "modelr", "limma", "markdown")
 
-# Shiny libraries
-p_load("shiny") #+#
-p_load("shinythemes")
-p_load('shinycssloaders')
-p_load("shinyalert")
-p_load('shinyFiles')
-p_load("shinyWidgets")
-p_load("shinyBS")
+lapply(list_of_packages, 
+       function(x) if(!require(x,character.only = TRUE)) install.packages(x, dependencies = TRUE))
 
-# Load data
-#p_load("readxl")
-#p_load("readr")
-p_load(openxlsx)
-
-# Visualization
-p_load("pheatmap")
-p_load("RColorBrewer")
-p_load("plotly")
-p_load("ggplot2")
-p_load("gridExtra")
-p_load("ggthemes")
-#install_github("vqv/ggbiplot")
-#library(ggbiplot)
-#p_load("ggiraph")
-p_load("autoplotly")
-#p_load("EnhancedVolcano")
-p_load(kableExtra)
-p_load("ggrepel")
-p_load("gtools")
+#install.packages("pacman") # for easy install and update #+#
+#library(pacman) #+#
 
 
-# Tidy data
-p_load("tidyverse")
-#p_load("dplyr")
-#p_load("data.table")
-#p_load(DT)
-p_load("janitor")
-#p_load(broom)
-
-# Analysis logic
-#p_load("sva")
-p_load("imputeLCMD")
-p_load("modelr")
-p_load("limma")
-
-# Report
-p_load(markdown)
-
-## no clue
-#p_load("stringi")
-#p_load("rgl")
-#p_load("crosstalk")
-#p_load("markdown")
-#p_load(xtable)
-#p_load("rlang")
-#p_load(nlme)
-
+# #p_load("rstudioapi")
+# 
+# # Shiny libraries
+# p_load("shiny") #+#
+# p_load("shinythemes")
+# p_load('shinycssloaders')
+# p_load("shinyalert")
+# p_load('shinyFiles')
+# p_load("shinyWidgets")
+# p_load("shinyBS")
+# 
+# # Load data
+# p_load(openxlsx)
+# 
+# # Visualization
+# p_load("pheatmap")
+# p_load("RColorBrewer")
+# p_load("plotly")
+# p_load("ggplot2")
+# p_load("gridExtra")
+# p_load("ggthemes")
+# p_load("autoplotly")
+# p_load("kableExtra")
+# p_load("ggrepel")
+# p_load("gtools")
+# 
+# 
+# # Tidy data
+# p_load("janitor")
+# p_load("tidyverse")
+# p_load("broom")
+# 
+# # Analysis logic
+# #p_load("sva")
+# p_load("imputeLCMD")
+# p_load("modelr")
+# p_load("limma")
+# 
+# # Report
+# p_load("markdown")
 
 # Needed for server setup
 #p_load("RJDBC")
@@ -144,8 +133,8 @@ ui <- shiny::fluidPage(
                                               shiny::tabPanel(title = "PCA",
                                                       shiny::selectizeInput("PCs",
                                                                       label = "Choose the principal components for plotting",
-                                                                      choices = list("PC1" = 1, "PC2" = 2, "PC3" = 3, "PC4" = 4, "PC5" = 5, "PC6" = 6, "PC7" = 7, "PC8" = 8),
-                                                                      selected = c(1, 2), 
+                                                                      choices = list("PC1" = "PC1", "PC2" = "PC2", "PC3" = "PC3", "PC4" = "PC4", "PC5" = "PC5", "PC6" = "PC6", "PC7" = "PC7", "PC8" = "PC8"),
+                                                                      selected = c("PC1", "PC1"), 
                                                                       multiple = TRUE, 
                                                                       options = list(maxItems = 2)
                                                        ),
@@ -629,18 +618,18 @@ server <- function(input, output, session) {
         #pcaSamples$PatientID <- readr::parse_factor(pcaSamples$PatientID, include_na = FALSE)
         #coloringFactor = ClinData()[,c("PatientID", input$labelCol)]
         #groups = dplyr::pull(dplyr::right_join(coloringFactor, pcaSamples)[,2])
-        #labels = NULL
+        labels = "PatientID"
       }  else {
         message("Please select a different parameter for colouring")
         groups = NULL
         labels = "PatientID"
       }
       ellipse = TRUE
-      if (is.numeric(groups)){
+      if (is.numeric(dummy$groups)){
         ellipse = FALSE
       }
 
-      biplot = ggplot(dummy, aes_string(x = "PC1", y = "PC2")) + 
+      biplot = ggplot(dummy, aes_string(x = input$PCs[1], y = input$PCs[2])) + 
         geom_point(aes(color = groups)) 
       if (ellipse == TRUE) {
         biplot = biplot + 
@@ -659,9 +648,10 @@ server <- function(input, output, session) {
       biplot <- biplot + 
         ggplot2::ggtitle("Principal component analysis") +
         ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+        ggrepel::geom_text_repel(aes_string(label=labels), show.legend = F, size = 4)
         #scale_fill_continuous(na.value="white") + 
         ggplot2::theme_light()
-      if (is.numeric(groups)){
+      if (is.numeric(dummy$groups)){
         biplot  = biplot + ggthemes::scale_color_continuous_tableau("Red-Gold",na.value = "grey30") 
       } else {
         biplot  = biplot + ggthemes::scale_color_tableau()
@@ -1306,7 +1296,7 @@ server <- function(input, output, session) {
       experimentalDesign = ClinDomit$designMatrix[,1:2] %>% tibble::rownames_to_column(var = "PatientID") %>% tidyr::gather(key= group, value = value, -PatientID ) %>% dplyr::filter(value > 0) %>% dplyr::select(-value) #%>% left_join(., ClinData()[, c("PatientID", input$filter_GR_fatcor, input$labelColBox)])
       ClinData = ClinData()
       GR_fatcor = "group"
-      reportBlocks$boxPlotUp = toaster::createBoxPlot( rows_selected = input$up_rows_selected, 
+      reportBlocks$boxPlotUp = createBoxPlot( rows_selected = input$up_rows_selected, 
                                               proteinData = original, 
                                               filter_GR_fatcor = input$filter_GR_fatcor, 
                                               ClinData = ClinData(), 
