@@ -93,7 +93,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                                                              NA. = col_logical()), skip = 2) %>% 
       mutate(`Gene names` = Name) 
   })
-  
+  q
   ClinColClasses <- reactive({
     req(ClinData())
     ClinDomit$data = ClinData() %>% janitor::clean_names()

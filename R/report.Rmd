@@ -34,7 +34,7 @@ params:
 
 ## 1. Data description and quality control
 The MaxQuant algrorithm identified `r params$linesFromMaxQuant` proteins across all samples. 
-`r params$stats_proteinGroups[[2]]` potential contaminants, `r params$stats_proteinGroups` proteins only identified by site, and `params$stats_proteinGroups[[3]]` proteins only identified in the reverse database were removed from the data set. The final dataset has `r params$stats_proteinGroups` rows. 
+`r params$stats_proteinGroups$NumPotCon` potential contaminants, `r params$stats_proteinGroups$IdentifiedBySite` proteins only identified by site, and `r params$stats_proteinGroups$Reverse` proteins only identified in the reverse database were removed from the data set. The final dataset has `r params$stats_proteinGroups$Cleaned` rows. 
 The plots on protein counts per sample and the sample coverage describe the proteomic depth on a per sample level. 
 The detection of highly abundant proteins can be examined in the cumulative intensities plot, while low abundance proteins are identified in the low abundance transcription factors plot.
 
