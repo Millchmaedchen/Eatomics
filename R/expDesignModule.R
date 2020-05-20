@@ -215,7 +215,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   )
   , {
     
-    ClinDomit$mainParameter = make_clean_names(input$GR_fatcor_gsea)
+    ClinDomit$mainParameter = janitor::make_clean_names(input$GR_fatcor_gsea)
     
     ## categorize numeric data - first parameter
     if (input$ContinChoice_gsea == FALSE & ClinColClasses_2()[ClinDomit$mainParameter]=='numeric') {
@@ -236,7 +236,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     if (is.null(need(input$expandFilter_gsea, FALSE)) & is.null(need(input$filter_GR_fatcor, FALSE))) {
       
       ## categorize second numeric parameter
-      ClinDomit$filterParameter =  make_clean_names(input$filter_GR_fatcor)
+      ClinDomit$filterParameter =  janitor::make_clean_names(input$filter_GR_fatcor)
       if (ClinColClasses_2()[ClinDomit$filterParameter]=='numeric') {
         req(input$filter_num.cutoff)
         ClinDomit$data = ClinDomit$data %>% 
@@ -283,9 +283,9 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   observeEvent(input$analyze_diff_gsea ,{
     validate(need(proteinAbundance$original , "Please choose a file from the enrichment calculation first."))
     
-    mainParameter = make_clean_names(ClinDomit$mainParameter)
+    mainParameter = janitor::make_clean_names(ClinDomit$mainParameter)
     if (!is.null(ClinDomit$filterParameter)) {
-      filterParameter = make_clean_names(ClinDomit$filterParameter)
+      filterParameter = janitor::make_clean_names(ClinDomit$filterParameter)
     }
     #    }
     if (input$expandFilter_gsea == TRUE & input$ContinChoice_gsea == FALSE) {
@@ -298,7 +298,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
     
     covariates = input$covariates#, TODO: Set up instead of filter for example
-    covariates = make_clean_names(covariates)
+    covariates = janitor::make_clean_names(covariates)
     
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
       ClinData = ClinDomit$data %>% 
