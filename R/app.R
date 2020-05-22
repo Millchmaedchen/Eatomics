@@ -92,7 +92,10 @@ ui <- shiny::fluidPage(
              shiny::tabPanel("Load and Prepare",
                       shiny::sidebarLayout(
                         shiny::sidebarPanel(
-                          tags$div(title="Load proteinGroups.txt file",
+                          tags$div(class = "header", checked = NA,
+                                   tags$b("Load proteinGroups.txt file")
+                          ),
+                          br(),
                                   shinyFilesButton(id = 'files', 
                                                    label='Select demo proteinGroups file', 
                                                    title = 'Select demo proteinGroups file', 
@@ -102,7 +105,9 @@ ui <- shiny::fluidPage(
                                   #           accept=c('text/csv',
                                   #                    'text/comma-separated-values,text/plain',
                                   #                    '.csv'))
-                          ),
+                          ,
+                          br(),
+                          br(),
                           shiny::radioButtons("insty", "Quantification type",
                                        choices = c("LFQ" = "LFQ","iBAQ" = "iBAQ"),
                                        selected = "LFQ"),
@@ -122,6 +127,10 @@ ui <- shiny::fluidPage(
                           #  p(a("Detailed information link ",
                           #       href = "https://www.rdocumentation.org/packages/MSnbase/versions/1.20.7/topics/impute-methods",
                           #       target="_blank")),
+                          tags$div(class = "header", checked = NA,
+                                   tags$b("Load the sample description file")
+                          ),
+                          br(),
 
                           tags$div(title="Load the sample description file",
                                         #   fileInput('ClinD',
