@@ -92,13 +92,22 @@ ui <- shiny::fluidPage(
              shiny::tabPanel("Load and Prepare",
                       shiny::sidebarLayout(
                         shiny::sidebarPanel(
-                          tags$div(title="Load proteinGroups.txt file",
-                                   fileInput('file1',
-                                             'ProteinGroups.txt',
-                                             accept=c('text/csv',
-                                                      'text/comma-separated-values,text/plain',
-                                                      '.csv'))
+                          tags$div(class = "header", checked = NA,
+                                   tags$b("Load proteinGroups.txt file")
                           ),
+                          br(),
+                                  shinyFilesButton(id = 'files', 
+                                                   label='Select demo proteinGroups file', 
+                                                   title = 'Select demo proteinGroups file', 
+                                                   multiple=FALSE)
+                                  # fileInput('file1',
+                                  #           'ProteinGroups.txt',
+                                  #           accept=c('text/csv',
+                                  #                    'text/comma-separated-values,text/plain',
+                                  #                    '.csv'))
+                          ,
+                          br(),
+                          br(),
                           shiny::radioButtons("insty", "Quantification type",
                                        choices = c("LFQ" = "LFQ","iBAQ" = "iBAQ"),
                                        selected = "LFQ"),
@@ -118,14 +127,23 @@ ui <- shiny::fluidPage(
                           #  p(a("Detailed information link ",
                           #       href = "https://www.rdocumentation.org/packages/MSnbase/versions/1.20.7/topics/impute-methods",
                           #       target="_blank")),
+                          tags$div(class = "header", checked = NA,
+                                   tags$b("Load the sample description file")
+                          ),
+                          br(),
 
                           tags$div(title="Load the sample description file",
-                                           fileInput('ClinD',
-                                                     'ClinicalData.txt',
-                                                     accept = c('text/csv',
-                                                                'text/comma-separated-values,text/plain',
-                                                                '.csv',
-                                                                '.tsv'))
+                                        #   fileInput('ClinD',
+                                        #             'ClinicalData.txt',
+                                        #             accept = c('text/csv',
+                                        #                        'text/comma-separated-values,text/plain',
+                                        #                        '.csv',
+                                        #                        '.tsv'))
+                                   shinyFilesButton(id = 'demo_clin_data', 
+                                                    label='Select demo clinical data', 
+                                                    title = 'Select demo clinical data', 
+                                                    multiple=FALSE)
+                                   
                           ),
                           br(),
                           shiny::actionButton("analyze","Analyze",class = "btn-primary")),
@@ -327,7 +345,7 @@ ui <- shiny::fluidPage(
 
                       ),
 
-            shiny::tabPanel("About",icon = icon("info-circle"),
+            shiny::tabPanel("Help",icon = icon("info-circle"),
                       # actionButton(
                       #   "tour_firststeps", "Click me for a quick tour",
                       #   icon("hand-o-right")
@@ -357,22 +375,24 @@ server <- function(input, output, session) {
   ###1 Load n Prep tab  
   
   #read .csv uploaded file  
-  volumes <-c(root='./Data')
-  shinyFiles::shinyFileChoose(input, 'files', root=c(root='./Data'), filetypes=c('', 'txt')) 
+  volumes <-c(root = paste(homeDir, '/../Data', sep = ""))
+  shinyFiles::shinyFileChoose(input, 'files', root=c(root='./../Data'), filetypes=c('', 'txt')) 
+  shinyFiles::shinyFileChoose(input, 'demo_clin_data', root=c(root='./../Data'), filetypes=c('', 'txt')) 
+  
   data <- shiny::reactive({
    # if (input$dataUpload == 'userFile'){
-      if (is.null(input$file1)) {
-        return(NULL)
-      } else{
-        inFile <- input$file1 
-      }
+      # if (is.null(input$file1)) {
+      #   return(NULL)
+      # } else{
+      #   inFile <- input$file1 
+      # }
     #} else if (input$dataUpload == 'serverFile') {
-     # if (is.null(input$files)){
-    #    return(NULL)
-    #  } else {
-    #    inFile <-parseFilePaths(volumes, input$files)
-    #  }
-      
+    if (is.null(input$files)){
+       return(NULL)
+     } else {
+       inFile <-parseFilePaths(volumes, input$files)
+     }
+
     #}
     if (length(inFile$datapath) == "0")
       return(NULL)
@@ -936,19 +956,23 @@ server <- function(input, output, session) {
   # Logic elements
   ## Load clinical parameters
   
-  volumes2 <-c(root='./DemoData')
-  shinyFiles::shinyFileChoose(input, 'ClinDs', root=c(root='./ClinicalData'), filetypes=c('', 'txt', 'tsv'))
+  volumes2 <-c(root = paste(homeDir, '/../Data', sep = ""))
+  shinyFiles::shinyFileChoose(input, 'ClinDs', root=c(root='./../Data'), filetypes=c('', 'txt', 'tsv'))
   
   ClinData <- shiny::reactive({
 
       shiny::validate(
-        need(input$ClinD != "", "Please select a file for upload or choose to use the database connection.")
+        #need(input$ClinD != "", "Please select a file for upload or choose to use the database connection.")
+        need(input$demo_clin_data != "", "Please select a file for upload or choose to use the database connection.")
       )
-      clinfile$name <- input$ClinD
+      #clinfile$name <- input$ClinD
+    clinfile$name <-parseFilePaths(volumes2, input$demo_clin_data)
 
     if (length(clinfile$name$datapath) == "0")
       return(NULL)
+      
     ClinData = readr::read_tsv(clinfile$name$datapath, 
+    #ClinData = readr::read_tsv(input$demo_clin_data$datapath, 
                         na =c("", "NA", "N/A","0","<Null>"),
                         skip_empty_rows = TRUE, 
                         locale = locale(decimal_mark = ",") # Todo: uncomment this for US/English seperator
@@ -2025,7 +2049,7 @@ server <- function(input, output, session) {
   ###5. About tabpanel
   
   output$markdown <- shiny::renderUI({
-    shiny::includeHTML("About.html")
+    shiny::includeHTML(paste(homeDir, "/../Vignette/About.html", sep = ""))
   })
   
   ####tour guide
