@@ -345,7 +345,7 @@ ui <- shiny::fluidPage(
 
                       ),
 
-            shiny::tabPanel("About",icon = icon("info-circle"),
+            shiny::tabPanel("Help",icon = icon("info-circle"),
                       # actionButton(
                       #   "tour_firststeps", "Click me for a quick tour",
                       #   icon("hand-o-right")
@@ -2049,7 +2049,7 @@ server <- function(input, output, session) {
   ###5. About tabpanel
   
   output$markdown <- shiny::renderUI({
-    shiny::includeHTML("About.html")
+    shiny::includeHTML(paste(homeDir, "/../Vignette/About.html", sep = ""))
   })
   
   ####tour guide
