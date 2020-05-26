@@ -643,8 +643,6 @@ server <- function(input, output, session) {
     
     output$downloadpca <- shiny::downloadHandler(
       filename = "pca.pdf",
-      # filename = function() {
-      #   paste('pca-', fileName ,Sys.Date(), '.pdf', sep='') },
       content = function(file) {
         grDevices::pdf(file)
         print(QCreport$pca)
@@ -684,16 +682,15 @@ server <- function(input, output, session) {
     })
     
     output$distributionPlot <- shiny::renderPlot({
-      QCreport$distributionPlot<-distributionPlot_input()
+      QCreport$distributionPlot <- distributionPlot_input()
       distributionPlot_input()
     })
     
     output$downloadDistributionPlot <- shiny::downloadHandler(
-      filename = function() {
-        paste('distributionPlot-', fileName ,Sys.Date(), '.pdf', sep='') },
+      filename = "DistributionPlot.pdf",
       content = function(file) {
         grDevices::pdf(file)
-        print(distributionPlot_input())
+        print(QCreport$distributionPlot)
         grDevices::dev.off()
       })
 
@@ -704,14 +701,14 @@ server <- function(input, output, session) {
       plot_proteinCoverage(original)
     })
     output$numbers <- renderPlot({
-      QCreport$number<-numbers_input()
+      QCreport$number <- numbers_input()
       numbers_input()
     })
     output$downloadNumbers <- downloadHandler(
       filename = "ProteinNumbers.pdf",
       content = function(file) {
         grDevices::pdf(file)
-        print(QCreport$number)
+        print(numbers_input())
         grDevices::dev.off()
       })
     
