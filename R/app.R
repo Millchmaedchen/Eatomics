@@ -9,11 +9,12 @@ setRepositories(ind = c(1:6, 8))
 
 # Install or load neccessary R packages 
 list_of_packages = c("shiny","shinythemes", 'shinycssloaders', "shinyalert", 'shinyFiles', "shinyWidgets", "shinyBS", "openxlsx", "pheatmap", "RColorBrewer", "plotly", "ggplot2",
-                     "gridExtra", "ggthemes", "autoplotly", "kableExtra", "ggrepel", "gtools", "verification", "https://cran.r-project.org/src/contrib/Archive/janitor/janitor_1.2.1.tar.gz", "tidyverse", "broom", "imputeLCMD", "modelr", "limma", "markdown")
+                     "gridExtra", "ggthemes", "autoplotly", "kableExtra", "ggrepel", "gtools", "verification", "tidyverse", "broom", "imputeLCMD", "modelr", "limma", "markdown")
 
 lapply(list_of_packages, 
        function(x) if(!require(x,character.only = TRUE)) install.packages(x, dependencies = TRUE))
 
+install.packages("https://cran.r-project.org/src/contrib/Archive/janitor/janitor_1.2.1.tar.gz", repos=NULL, type='source')
 #install.packages("pacman") # for easy install and update #+#
 #library(pacman) #+#
 
