@@ -39,3 +39,5 @@ install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools
 
 1. Krug, Karsten, et al. "A curated resource for phosphosite-specific signature analysis." Molecular & cellular proteomics 18.3 (2019): 576-593. - describes ssGSEA 2.0, which is re-used in this repository
 2. Ritchie, Matthew E., et al. "limma powers differential expression analyses for RNA-sequencing and microarray studies." Nucleic acids research 43.7 (2015): e47-e47. - describes limma, which is needed for the core functionality of differential expression analysis
+3. Chen CY, Caporizzo MA, Bedi K, Vite A, Bogush AI, Robison P, Heffler JG, Salomon AK, Kelly NA, Babu A, Morley MP, Margulies KB, Prosser BL. Suppression of detyrosinated microtubules improves cardiomyocyte function in human heart failure. Nat Med. 2018, PubMed: 29892068 - the demo data set is a modified version of their protein measurements
+
