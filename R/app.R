@@ -75,7 +75,6 @@ source(paste(homeDir, '/ssGSEA_PSEA.R', sep = ""))
 source(paste(homeDir, '/expDesignModule.R', sep = ""))
 
 # Load available gene sets from Data 
-browser()
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
 
@@ -206,7 +205,8 @@ ui <- shiny::fluidPage(
                                                        shiny::plotOutput("CumSumPlot", height = 600),
                                                        shiny::downloadButton('downloadCumSumPlot', 'Save')
                                               )
-                        )   
+                        ),   
+                        br()
                         )
                       )
              ),
@@ -266,7 +266,8 @@ ui <- shiny::fluidPage(
                           
                           br(),
                           shiny::downloadButton("report", "Generate report"),
-                          shiny::downloadButton("reportDataDL", "Download report data")
+                          shiny::downloadButton("reportDataDL", "Download report data"),
+                          br()
                         )
                       )
                       
