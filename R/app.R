@@ -205,7 +205,8 @@ ui <- shiny::fluidPage(
                                                        shiny::plotOutput("CumSumPlot", height = 600),
                                                        shiny::downloadButton('downloadCumSumPlot', 'Save')
                                               )
-                        )   
+                        ),   
+                        br()
                         )
                       )
              ),
@@ -265,14 +266,13 @@ ui <- shiny::fluidPage(
                           
                           br(),
                           shiny::downloadButton("report", "Generate report"),
-                          shiny::downloadButton("reportDataDL", "Download report data")
+                          shiny::downloadButton("reportDataDL", "Download report data"),
+                          br()
                         )
                       )
                       
              ),
              shiny::tabPanel("ssGSEA", 
-                      # actionBttn("tour_ssGSEA", icon("info"),color = "success",style = "material-circle",size = "xs"
-                      #),
                       shiny::sidebarLayout(
                         shiny::sidebarPanel(
                           tags$strong("Change the parameters & hit the analyze button  ", style="color:#18bc9c"),
@@ -343,25 +343,10 @@ ui <- shiny::fluidPage(
              shiny::tabPanel("Differential Enrichment",
                       #uiOutput("diff.gs.collection"),
                       expDesignModule_UI(id = "gsea")
-
-                      ),
-
+                 ),
             shiny::tabPanel("Help",icon = icon("info-circle"),
-                      # actionButton(
-                      #   "tour_firststeps", "Click me for a quick tour",
-                      #   icon("hand-o-right")
-                      #   # style=.actionbutton_biocstyle
-                      # ),
-                      shiny::uiOutput("markdown")
+                      shiny::includeHTML(paste(homeDir, "/../Vignette/Test2.html", sep = ""))
              )
-             
-             
-             #  navbarMenu("Report",icon = icon("fas fa-save"),
-             #             tabPanel(downloadButton("report", "Final report",class="butt")),
-             #             tags$head(tags$style(".butt{color: white !important;}")),##font color to white
-             #             tabPanel(downloadButton("reportDataDL", "limma report",class="butt"))
-             #  )
-             
   )
 )
 
@@ -643,8 +628,6 @@ server <- function(input, output, session) {
     
     output$downloadpca <- shiny::downloadHandler(
       filename = "pca.pdf",
-      # filename = function() {
-      #   paste('pca-', fileName ,Sys.Date(), '.pdf', sep='') },
       content = function(file) {
         grDevices::pdf(file)
         print(QCreport$pca)
@@ -684,16 +667,15 @@ server <- function(input, output, session) {
     })
     
     output$distributionPlot <- shiny::renderPlot({
-      QCreport$distributionPlot<-distributionPlot_input()
+      QCreport$distributionPlot <- distributionPlot_input()
       distributionPlot_input()
     })
     
     output$downloadDistributionPlot <- shiny::downloadHandler(
-      filename = function() {
-        paste('distributionPlot-', fileName ,Sys.Date(), '.pdf', sep='') },
+      filename = "DistributionPlot.pdf",
       content = function(file) {
         grDevices::pdf(file)
-        print(distributionPlot_input())
+        print(QCreport$distributionPlot)
         grDevices::dev.off()
       })
 
@@ -704,14 +686,14 @@ server <- function(input, output, session) {
       plot_proteinCoverage(original)
     })
     output$numbers <- renderPlot({
-      QCreport$number<-numbers_input()
+      QCreport$number <- numbers_input()
       numbers_input()
     })
     output$downloadNumbers <- downloadHandler(
       filename = "ProteinNumbers.pdf",
       content = function(file) {
         grDevices::pdf(file)
-        print(QCreport$number)
+        print(numbers_input())
         grDevices::dev.off()
       })
     
@@ -1622,18 +1604,15 @@ server <- function(input, output, session) {
 
   shiny::observeEvent(input$goButton, {
     
-    shiny::validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
+    shiny::validate(need(proteinAbundance$original, "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
     ssgsea_data$data = as.matrix(original)
-    #ssgsea_data= imp_woNorm()
-    
-    
+
     shiny::withProgress(message = 'Calculation in progress',
                  detail = 'An alert notification will appear upon download of the file', value = 1, {
 
-                   
                    ssgsea_obj = ssGSEA2(input.ds = ssgsea_data$data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
-                                        weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
+                                        weight = input$weight, statistic =input$statistic, output.score.type= input$output.score.type, 
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
                  }) 
@@ -2049,9 +2028,9 @@ server <- function(input, output, session) {
   
   ###5. About tabpanel
   
-  output$markdown <- shiny::renderUI({
-    shiny::includeHTML(paste(homeDir, "/../Vignette/About.html", sep = ""))
-  })
+ # output$markdown <- shiny::renderUI({
+#    shiny::includeHTML(paste(homeDir, "/../Vignette/Help.html", sep = ""))
+#  })
   
   ####tour guide
   

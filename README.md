@@ -26,7 +26,7 @@ runUrl("https://github.com/Millchmaedchen/Eatomics/archive/master.zip", subdir =
 
 2. Demo_clinicaldata.txt: The sample description file - a tab separated text file as can be produced with any Office program by saving the spread sheet as .txt. The  file needs to contain a column named "PatientID", which matches the sample ID's from the proteinGroups header (without the "LFQ intensity" or "iBAQ" prefixes) and one or more named columns with "parameters", i.e. textual/factual/logical or continuous/integer values. Column names have to be unique.
 
-Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may directly use your own data or the demo files in Eatomics/Data from the github repository. 
+Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may directly use your own data or the demo files in Eatomics/Data from the github repository. The demo proteinGroups file represents a shortened version of the data assessed and described in Chen et al. [4] and is accompanied by a sample description file prepared by us, based on the publications supplementary data. 
 
 ## 4. Troubleshooting 
 
@@ -37,7 +37,11 @@ install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools
 
 # References
 
-1. Krug, Karsten, et al. "A curated resource for phosphosite-specific signature analysis." Molecular & cellular proteomics 18.3 (2019): 576-593. - describes ssGSEA 2.0, which is re-used in this repository
-2. Ritchie, Matthew E., et al. "limma powers differential expression analyses for RNA-sequencing and microarray studies." Nucleic acids research 43.7 (2015): e47-e47. - describes limma, which is needed for the core functionality of differential expression analysis
-3. Chen CY, Caporizzo MA, Bedi K, Vite A, Bogush AI, Robison P, Heffler JG, Salomon AK, Kelly NA, Babu A, Morley MP, Margulies KB, Prosser BL. Suppression of detyrosinated microtubules improves cardiomyocyte function in human heart failure. Nat Med. 2018, PubMed: 29892068 - the demo data set is a modified version of their protein measurements
+1: Krug, K., et al., A Curated Resource for Phosphosite-specific Signature Analysis. Mol Cell Proteomics, 2019. 18(3): p. 576-593.
+
+2: Ritchie, Matthew E., et al. "limma powers differential expression analyses for RNA-sequencing and microarray studies." Nucleic acids research 43.7 (2015): e47-e47.
+
+3: Lazar, C., "imputeLCMD: a collection of methods for left-censored missing data imputation." R package, version 2 (2015).
+
+4: Chen, Christina Yingxian, et al. "Suppression of detyrosinated microtubules improves cardiomyocyte function in human heart failure." Nature medicine 24.8 (2018): 1225-1233.
 

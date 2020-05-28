@@ -154,13 +154,14 @@ matchedExpDesign <- function(expDesign, proteinAbundance){
 
 plot_distribution <- function (proteinAbundance) {
   proteinAbundance <- proteinAbundance %>% gather(key = "PatientID", value = "Abundance")
-  ggplot(proteinAbundance, aes(x = PatientID, y = Abundance)) + 
+  ggplot(proteinAbundance, aes(x = PatientID, y = Abundance), fill = "c") + 
     geom_boxplot(notch = TRUE, na.rm = TRUE) +
     coord_flip() +
     labs(x = "SampleID", y = "Log2-transformed intensity") +
     guides(fill=FALSE) +
-    theme_light() +
-    scale_color_tableau() 
+    scale_color_tableau() +
+    theme_light() 
+
 }
 
 
@@ -176,8 +177,8 @@ plot_proteinCoverage<-function (proteinAbundance) {
     geom_col() +
     labs(title = "Measured proteins per sample", x = "", y = "Number of proteins") + 
     guides(fill=FALSE) +
-    theme_light() +
     scale_color_tableau() +
+    theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 }
 

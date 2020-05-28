@@ -50,9 +50,10 @@ expDesignModule_UI <- function(id) {
                htmlOutput(ns("doc1"))
         )),
       
-      br()
+      br(),
       #downloadButton("report", "Generate report"),
-      #downloadButton("reportDataDL", "Download report data")
+      #downloadButton("reportDataDL", "Download report data"),
+      br()
     )
   )
 }
