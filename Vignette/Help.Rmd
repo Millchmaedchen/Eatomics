@@ -43,7 +43,7 @@ Eatomics requires two file inputs:
 
 2. Demo_clinicaldata.txt: The sample description file - a tab separated text file as can be produced with any Office program by saving the spread sheet as .txt. The  file needs to contain a column named "PatientID", which contains IDs that match the sample ID's from the proteinGroups header (without the "LFQ intensity" or "iBAQ" prefixes) and one or more named columns with "parameters", i.e. textual/factual/logical or continuous/integer values. Column names have to be unique.
  
-Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may directly use your own data or the demo files in Eatomics/Data from the github repository. 
+Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may directly use your own data or the demo files in Eatomics/Data from the github repository. The demo proteinGroups file represents a shortened version of the data assessed and described in Chen et al. [4] and is accompanied by a sample description file prepared by us, based on the publications supplementary data. 
 
 ![Examples of input files needed for Eatomics are an evidence file as produced by the MaxQuant algorithm (left) and a sample description file which may contain as many parameters as available.](Images/Input_Files.png){ width=100% }
 
@@ -83,7 +83,7 @@ To begin the analysis the user has to upload the MaxQuant file (e.g.proteinGroup
     + prepare unique IDs for duplicate gene names or (make.unique() R base function)
     + to sum up multiple abundance values for one gene name (*checkForIsoforms* custom function). 
 In the latter case, the user is informed about intensity shares. 
-* `r text_spec("Missing value imputation", background = "#2C3E50", color = "white", bold = T)` can be performed using knn (k-nearest-neighbour), MinDet or QRLIC from the imputeLCMD package or a custom implementation of Perseus' sampling from Gaussian distribution (implemented by Matthias Ziehm). 
+* `r text_spec("Missing value imputation", background = "#2C3E50", color = "white", bold = T)` can be performed using knn (k-nearest-neighbour), MinDet or QRLIC from the imputeLCMD package [3] or a custom implementation of Perseus' sampling from Gaussian distribution (implemented by Matthias Ziehm). 
 
 #### Load the sample description/clinical data file
 
@@ -151,7 +151,7 @@ Protein intensities are cumulated across all samples and plotted according to th
 ## Step 2: Differential expression
 
 In step 2, the user is enabled to translate a given hypothesis on the data into an experimental design and to test the hypothesis.
-**Eatomics** uses limma to perform real time analysis of differentially expressed proteins amongst clinical parameters of choice. 
+**Eatomics** uses limma [2] to perform real time analysis of differentially expressed proteins amongst clinical parameters of choice. 
 The resulting interactive visualization plot including volcano plots (detailed below) allows a quick and detailed overview on the differential expression.
 [limma](http://bioconductor.org/packages/release/bioc/html/limma.html) (linear models for microarray data), is a commonly used  R/Bioconductor software package for analyzing microarray and RNA-seq data. 
 Limma fits a linear model which can be parametrized in Eatomics elaborate experimental design module.<br />
@@ -187,6 +187,9 @@ Limma fits a linear model which can be parametrized in Eatomics elaborate experi
 ![Experimental design module with two categorical variables. ](Images/Eatomics_ExpDs_Module.png){ width=90% }
 
 ![Experimental design module with a continuous variable. ](Images/Eatomics_DiffExpMod_Contin.png){ width=90% }
+</div>
+
+<div class = "column-left-full">
 
 </div>
 
@@ -222,4 +225,88 @@ The color of individual dots can be chosen to reflect a parameter from the sampl
 
 </div>
 
+<div class = "column-left-full">
+
+## Step 3: Enrichment score calculation (ssGSEA) 
+
+The calculation of ssGSEA (single-sample Gene Set Enrichment Analysis) scores is mainly a prerequisite to perform differential enrichment in step 4 and is adapted from Krug et al. [1] (https://github.com/broadinstitute/ssGSEA2.0). 
+
+Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. 
+Advantages of this approach include the flexible in- and exlcusion of samples without recalculation of differentially expressed proteins and presumably the possibility of reducing batch effects.
+
+</div>
+
+<div class = "column-left">
+
+The user `r text_spec("selects a gene set", background = "#2C3E50", color = "white", bold = T)` from the list of MsigDB (**H**-) Hallmark, (**C5.all.**-) Gene Ontology (GO) all terms or subsets of GO molecular function (**C5.mf.**), GO biological process (**C5.bp.**), or GO cellular compartment (**C5.cc.**), (**C2.cp.reactome**-) Reactome, (**C2.cp.biocarta.**-) Biocarta or (**C2.cp.kegg.**-) KEGG to calculate the enrichment score. 
+Alternatively, the user may provide a custom gene set file in .gmt format by pasting it into the texttt{Data/GeneSetDBs} folder. 
+As in the original code, many parameters may be set by an expert user.
+However, for a quick setup the default options from the original publication are implemented.
+For convenience, the user may `r text_spec("specify a prefix", background = "#2C3E50", color = "white", bold = T)` for the output files. Enrichment scores are stored as .gct files the `Data/EnrichmentScores` folder to be accessed from the next tab.
+An `r text_spec("alert message", background = "#2C3E50", color = "white", bold = T)` will be pop up on completion of calculation.
+
+</div>
+
+<div class = "column-right">
+
+![Configuration panel to set up ssGSEA calculation. ](Images/Eatomics_ssGSEA_configuration.png){ width=90% }
+
+</div>
+
+<div class = "column-left-full">
+
+## Step 4: Differential enrichment
+
+Using the ssGSEA procedure to calculate per sample enrichment scores enables us to re-use the differential expression logic from the second tab panel to be used again for differential enrichments. 
+As such, step 4 allows the user to apply the research hypothesis directly to the enrichment scores and find gene sets and pathways that are significantly enriched. 
+
+</div>
+
+<div class = "column-left">
+
+As a result, the UI is almost identical as in step 2. As a difference, instead of using the prepared preotein abundance data,  the user has to `r text_spec("choose the enrichment score file", background = "#2C3E50", color = "white", bold = T)` from those prepared on the ssGSEA tab. The selected file should be the plain enrichment score file, so neither the file containing the p-values suffix, nor fdr-suffix file are appropriate. 
+After configuring the experimental design, results are visualized in the interactive volcano plot and gene lists and box plots are available for further exploration as well. 
+Significant results are gene sets, e.g. GO terms or pathways, that are enriched in the first experimental group versus the second group. Fold changes give an impression on the effect size, which is an advantage over other methods, which mainly deliver p-values to assess importance.
+
+</div>
+
+<div class = "column-right">
+
+![Configuration panel for differential enrichment analysis with a selection of the previously prepared ssGSEA score. ](Images/Eatomics_DiffEnrich.png){ width=90% }
+</div>
+
+<div class = "column-left-full">
+
+
+## Report and data download
+
+</div>
+
+<div class = "column-left">
+
+On both differential analysis tabs (step 2 and 4) there are buttons for displaying more detailed information on the configured experimental design and for the `r text_spec("download of report", background = "#2C3E50", color = "white", bold = T)` and `r text_spec("data tables", background = "#2C3E50", color = "white", bold = T)`. 
+
+</div>
+
+<div class = "column-right">
+
+![Detailed experimantal description wihtin the app and two buttons to download the report pdf and the data tables. ](Images/Eatomics_ReportDataDownload.png){ width=90% }
+
+</div>
+
+<div class = "column-left-full">
+
+![Eatomics output files are data table with multiple sheets containing all information generated throughout the analysis and a written report with all images and explanations for better interpretation.](Images/Eatomics_Output.png){ width=90% }
+
+# 3. References
+
+1: Krug, K., et al., A Curated Resource for Phosphosite-specific Signature Analysis. Mol Cell Proteomics, 2019. 18(3): p. 576-593.
+
+2: Ritchie, Matthew E., et al. "limma powers differential expression analyses for RNA-sequencing and microarray studies." Nucleic acids research 43.7 (2015): e47-e47.
+
+3: Lazar, C., "imputeLCMD: a collection of methods for left-censored missing data imputation." R package, version 2 (2015).
+
+4: Chen, Christina Yingxian, et al. "Suppression of detyrosinated microtubules improves cardiomyocyte function in human heart failure." Nature medicine 24.8 (2018): 1225-1233.
+
+</div>
 

@@ -75,6 +75,7 @@ source(paste(homeDir, '/ssGSEA_PSEA.R', sep = ""))
 source(paste(homeDir, '/expDesignModule.R', sep = ""))
 
 # Load available gene sets from Data 
+browser()
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
 
@@ -271,8 +272,6 @@ ui <- shiny::fluidPage(
                       
              ),
              shiny::tabPanel("ssGSEA", 
-                      # actionBttn("tour_ssGSEA", icon("info"),color = "success",style = "material-circle",size = "xs"
-                      #),
                       shiny::sidebarLayout(
                         shiny::sidebarPanel(
                           tags$strong("Change the parameters & hit the analyze button  ", style="color:#18bc9c"),
@@ -344,12 +343,9 @@ ui <- shiny::fluidPage(
                       #uiOutput("diff.gs.collection"),
                       expDesignModule_UI(id = "gsea")
                  ),
-
             shiny::tabPanel("Help",icon = icon("info-circle"),
                       shiny::includeHTML(paste(homeDir, "/../Vignette/Test2.html", sep = ""))
              )
-
-             
   )
 )
 
@@ -1607,18 +1603,15 @@ server <- function(input, output, session) {
 
   shiny::observeEvent(input$goButton, {
     
-    shiny::validate(need(input$file1 != "", "Please upload proteomics data first (previous tab)."))
+    shiny::validate(need(proteinAbundance$original, "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
     ssgsea_data$data = as.matrix(original)
-    #ssgsea_data= imp_woNorm()
-    
-    
+
     shiny::withProgress(message = 'Calculation in progress',
                  detail = 'An alert notification will appear upon download of the file', value = 1, {
 
-                   
                    ssgsea_obj = ssGSEA2(input.ds = ssgsea_data$data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
-                                        weight = input$weight,statistic =input$statistic,output.score.type= input$output.score.type, 
+                                        weight = input$weight, statistic =input$statistic, output.score.type= input$output.score.type, 
                                         #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
                                         nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
                  }) 
