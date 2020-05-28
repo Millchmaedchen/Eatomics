@@ -343,24 +343,12 @@ ui <- shiny::fluidPage(
              shiny::tabPanel("Differential Enrichment",
                       #uiOutput("diff.gs.collection"),
                       expDesignModule_UI(id = "gsea")
-
-                      ),
+                 ),
 
             shiny::tabPanel("Help",icon = icon("info-circle"),
-                      # actionButton(
-                      #   "tour_firststeps", "Click me for a quick tour",
-                      #   icon("hand-o-right")
-                      #   # style=.actionbutton_biocstyle
-                      # ),
-                      shiny::uiOutput("markdown")
+                      shiny::includeHTML(paste(homeDir, "/../Vignette/Test2.html", sep = ""))
              )
-             
-             
-             #  navbarMenu("Report",icon = icon("fas fa-save"),
-             #             tabPanel(downloadButton("report", "Final report",class="butt")),
-             #             tags$head(tags$style(".butt{color: white !important;}")),##font color to white
-             #             tabPanel(downloadButton("reportDataDL", "limma report",class="butt"))
-             #  )
+
              
   )
 )
@@ -2046,9 +2034,9 @@ server <- function(input, output, session) {
   
   ###5. About tabpanel
   
-  output$markdown <- shiny::renderUI({
-    shiny::includeHTML(paste(homeDir, "/../Vignette/About.html", sep = ""))
-  })
+ # output$markdown <- shiny::renderUI({
+#    shiny::includeHTML(paste(homeDir, "/../Vignette/Help.html", sep = ""))
+#  })
   
   ####tour guide
   
