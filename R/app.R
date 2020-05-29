@@ -97,15 +97,15 @@ ui <- shiny::fluidPage(
                                    tags$b("Load proteinGroups.txt file")
                           ),
                           br(),
-                                  shinyFilesButton(id = 'files', 
-                                                   label='Select demo proteinGroups file', 
-                                                   title = 'Select demo proteinGroups file', 
-                                                   multiple=FALSE)
-                                  # fileInput('file1',
-                                  #           'ProteinGroups.txt',
-                                  #           accept=c('text/csv',
-                                  #                    'text/comma-separated-values,text/plain',
-                                  #                    '.csv'))
+                                  #shinyFilesButton(id = 'files', 
+                                  #                 label='Select demo proteinGroups file', 
+                                  #                 title = 'Select demo proteinGroups file', 
+                                  #                 multiple=FALSE)
+                                   fileInput('file1',
+                                             'ProteinGroups.txt',
+                                             accept=c('text/csv',
+                                                      'text/comma-separated-values,text/plain',
+                                                      '.csv'))
                           ,
                           br(),
                           br(),
@@ -134,16 +134,16 @@ ui <- shiny::fluidPage(
                           br(),
 
                           tags$div(title="Load the sample description file",
-                                        #   fileInput('ClinD',
-                                        #             'ClinicalData.txt',
-                                        #             accept = c('text/csv',
-                                        #                        'text/comma-separated-values,text/plain',
-                                        #                        '.csv',
-                                        #                        '.tsv'))
-                                   shinyFilesButton(id = 'demo_clin_data', 
-                                                    label='Select demo clinical data', 
-                                                    title = 'Select demo clinical data', 
-                                                    multiple=FALSE)
+                                           fileInput('ClinD',
+                                                     'ClinicalData.txt',
+                                                     accept = c('text/csv',
+                                                                'text/comma-separated-values,text/plain',
+                                                                '.csv',
+                                                                '.tsv'))
+                                   #shinyFilesButton(id = 'demo_clin_data', 
+                                  #                  label='Select demo clinical data', 
+                                  #                  title = 'Select demo clinical data', 
+                                  #                  multiple=FALSE)
                                    
                           ),
                           br(),
@@ -367,24 +367,23 @@ server <- function(input, output, session) {
   
   data <- shiny::reactive({
    # if (input$dataUpload == 'userFile'){
-      # if (is.null(input$file1)) {
-      #   return(NULL)
-      # } else{
-      #   inFile <- input$file1 
-      # }
+       if (is.null(input$file1)) {
+         return(NULL)
+       } else{
+         inFile <- input$file1 
+       }
     #} else if (input$dataUpload == 'serverFile') {
-    if (is.null(input$files)){
-       return(NULL)
-     } else {
-       inFile <-parseFilePaths(volumes, input$files)
-     }
+    #if (is.null(input$files)){
+    #   return(NULL)
+    # } else {
+    #   inFile <-parseFilePaths(volumes, input$files)
+     #}
 
     #}
     if (length(inFile$datapath) == "0")
       return(NULL)
     
     protfile$protfile <- inFile
-    #inFile$datapath = "/home/milena/Milena/Eatomics/R/ssGSEA_evaluation/proteinGroups.txt"
     proteinGroups = read_tsv(inFile$datapath, col_types = cols(Reverse = "c", `Potential contaminant` = "c", `Only identified by site` = "c"))
 
     stats_proteinGroups = NULL
@@ -926,6 +925,7 @@ server <- function(input, output, session) {
   
   shiny::observe({
     ClinColClasses()[input$GR_fatcor] != "numeric"
+    showNotification("Pleas make sure that you have selected a continuous variable.")
     shiny::updateCheckboxInput(session, "ContinChoice", value = FALSE)
   })
   shiny::observe({
@@ -945,11 +945,11 @@ server <- function(input, output, session) {
   ClinData <- shiny::reactive({
 
       shiny::validate(
-        #need(input$ClinD != "", "Please select a file for upload or choose to use the database connection.")
-        need(input$demo_clin_data != "", "Please select a file for upload or choose to use the database connection.")
+        need(input$ClinD != "", "Please select a file for upload or choose to use the database connection.")
+        #need(input$demo_clin_data != "", "Please select a file for upload or choose to use the database connection.")
       )
-      #clinfile$name <- input$ClinD
-    clinfile$name <-parseFilePaths(volumes2, input$demo_clin_data)
+      clinfile$name <- input$ClinD
+    #clinfile$name <-parseFilePaths(volumes2, input$demo_clin_data)
 
     if (length(clinfile$name$datapath) == "0")
       return(NULL)
