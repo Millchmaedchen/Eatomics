@@ -81,7 +81,7 @@ ssGSEA2 <- function (
   
   ## ###################################################
   ## initialize log-file
-  cat('##', format(Sys.time()), '\n', file=log.file)
+  #cat('##', format(Sys.time()), '\n', file=log.file)
   
   ## ###################################################
   ## arguments
@@ -200,8 +200,8 @@ ssGSEA2 <- function (
   ## calculate the overlap
   size.ol.G <- sapply(gs, length)  ## original: require at least 'min.overlap' unique GENE SET members
   
-  cat('MSigDB import: ',  file=log.file, append=T)
-  cat(Sys.time()-tt, '\n',  file=log.file, append=T)
+  #cat('MSigDB import: ',  file=log.file, append=T)
+  #cat(Sys.time()-tt, '\n',  file=log.file, append=T)
   
   ## ###########################################
   ## remove gene sets with unsufficient overlap
@@ -227,7 +227,7 @@ ssGSEA2 <- function (
   ## final number of gene sets to test
   N.gs <- length(keep.idx)
   
-  cat('Testing', length(keep.idx), 'gene sets:\n',  file=log.file, append=T)
+  #cat('Testing', length(keep.idx), 'gene sets:\n',  file=log.file, append=T)
   
   ## #########################################
   ## check for redundant signature sets
@@ -549,7 +549,7 @@ ssGSEA2 <- function (
         gene.set.direction <- gene.set.direction[ gene.set.no.na ]
         
         ##cat('gene set overlap:', length(gene.set), '\n', file=log.file, append=T)
-        cat('gene set overlap:', sum(gene.names %in% gene.set), '\n', file=log.file, append=T)
+        #cat('gene set overlap:', sum(gene.names %in% gene.set), '\n', file=log.file, append=T)
       }
       
       ##if(length(gene.set) < min.overlap){
@@ -636,7 +636,7 @@ ssGSEA2 <- function (
     tmp <-  foreach(gs.i = 1:N.gs) %dopar% {
       
       ##cat( (gs.i / N.gs)*100, '%\n')
-      cat(names(gs)[gs.i],  '\n' , file=log.file, append=T)
+      #cat(names(gs)[gs.i],  '\n' , file=log.file, append=T)
       gene.overlap <- gs[[gs.i]]
       
       if(!is.null(gs.direction))
@@ -666,7 +666,7 @@ ssGSEA2 <- function (
       cat( gs.names[gs.i], '  ' )
       cat( (gs.i / N.gs)*100, '%\n')
       
-      cat(names(gs)[gs.i],  '\n' , file=log.file, append=T)
+      #cat(names(gs)[gs.i],  '\n' , file=log.file, append=T)
       
       gene.overlap <- gs[[gs.i]]
       
