@@ -1,6 +1,5 @@
-## The code is developed by Milena Kraus and Mariet Stephen. 
-
-# This is a Shiny web application (ui + server) for quantitative proteomics data analysis.
+## The code is written by Milena Kraus and Mariet Stephen. 
+# This is a Shiny application  for quantitative proteomics data analysis.
 # You can run the application by clicking
 # the 'Run App' button above.
 
@@ -15,54 +14,6 @@ lapply(list_of_packages,
        function(x) if(!require(x,character.only = TRUE)) install.packages(x, dependencies = TRUE))
 
 install.packages("https://cran.r-project.org/src/contrib/Archive/janitor/janitor_1.2.1.tar.gz", repos=NULL, type='source')
-#install.packages("pacman") # for easy install and update #+#
-#library(pacman) #+#
-
-
-# #p_load("rstudioapi")
-# 
-# # Shiny libraries
-# p_load("shiny") #+#
-# p_load("shinythemes")
-# p_load('shinycssloaders')
-# p_load("shinyalert")
-# p_load('shinyFiles')
-# p_load("shinyWidgets")
-# p_load("shinyBS")
-# 
-# # Load data
-# p_load(openxlsx)
-# 
-# # Visualization
-# p_load("pheatmap")
-# p_load("RColorBrewer")
-# p_load("plotly")
-# p_load("ggplot2")
-# p_load("gridExtra")
-# p_load("ggthemes")
-# p_load("autoplotly")
-# p_load("kableExtra")
-# p_load("ggrepel")
-# p_load("gtools")
-# 
-# 
-# # Tidy data
-# p_load("janitor")
-# p_load("tidyverse")
-# p_load("broom")
-# 
-# # Analysis logic
-# #p_load("sva")
-# p_load("imputeLCMD")
-# p_load("modelr")
-# p_load("limma")
-# 
-# # Report
-# p_load("markdown")
-
-# Needed for server setup
-#p_load("RJDBC")
-#p_load("devtools")
 
 # Load non-reactive helper functions 
 homeDir = getwd()
@@ -174,25 +125,6 @@ ui <- shiny::fluidPage(
                                                        br(),
                                                        shiny::downloadButton('downloadNumbers', 'Save')
                                               ),
-                                              #tabPanel(title = "Sample coverage",
-                                              #         plotOutput("coverage", height = 600),
-                                              #         downloadButton('downloadCoverage', 'Save')
-                                              #),
-                                              
-                                              # tabPanel(title = "Missing values - Heatmap",
-                                              #          plotOutput("missval", height = 800),
-                                              #          downloadButton('downloadMissval', 'Save')
-                                              # ),
-                                              # tabPanel(title = "Missing values - Quant",
-                                              #          plotOutput("detect", height = 600),
-                                              #          downloadButton('downloadDetect', 'Save')
-                                              # ),
-                                              # 
-                                              # tabPanel(title = "Imputation",
-                                              #          plotOutput("imputation", height = 600),
-                                              #          downloadButton('downloadImputation', 'Save')
-                                              # ),
-                                              
                                               shiny::tabPanel(title = "Sample to sample heatmap",
                                                        shiny::selectizeInput(inputId = "distanceMetric",
                                                                       label = "Select the (dis-)similarity metric",
@@ -211,8 +143,6 @@ ui <- shiny::fluidPage(
                       )
              ),
              shiny::tabPanel("Differential Expression",
-                      #actionBttn("tour_limma", icon("info"),color = "success",style = "material-circle",size = "xs"
-                      #),
                       shiny::sidebarLayout(       
                         shiny::sidebarPanel(
                           shiny::uiOutput("conditional_grouping_limma"),
@@ -588,10 +518,6 @@ server <- function(input, output, session) {
       } else if (!is.null(input$labelCol) && input$labelCol != "PatientID") {
         message(input$labelCol)
         dummy = dummy %>% left_join(., dplyr::select(ClinData(), PatientID, groups = input$labelCol))
-        #pcaSamples$PatientID = gsub(pattern = "\\.", replacement = " ", x = pcaSamples$PatientID)
-        #pcaSamples$PatientID <- readr::parse_factor(pcaSamples$PatientID, include_na = FALSE)
-        #coloringFactor = ClinData()[,c("PatientID", input$labelCol)]
-        #groups = dplyr::pull(dplyr::right_join(coloringFactor, pcaSamples)[,2])
         labels = "PatientID"
       }  else {
         message("Please select a different parameter for colouring")
@@ -633,31 +559,6 @@ server <- function(input, output, session) {
         grDevices::dev.off()
       })
     
-    
-    # #Normalization plot
-    # norm_input <- reactive({
-    #   plot_normalization_new(data_se_parsed(),
-    #                          norm())
-    # })
-    # output$norm <- renderPlot({
-    #   QCreport$norm<- ggsave(norm_input(),height = 800 + (length(norm_input()[[1]])*10))
-    #   norm_input()
-    # })
-    # 
-    # output$ui_norm <- renderUI({
-    #   plotOutput("norm", height = 800 + (length(norm()[[1]])*10))
-    # })
-    # 
-    # inFile <- input$file1
-    # output$downloadNorm <- downloadHandler(
-    #   filename = function() {
-    #     paste('normalization-', fileName ,Sys.Date(), '.pdf', sep='') },
-    #   content = function(file) {
-    #     pdf(file)
-    #     print(norm_input ())
-    #     dev.off()
-    #   })
-    
     #Distribution plot
     
     distributionPlot_input <- shiny::reactive({
@@ -695,80 +596,7 @@ server <- function(input, output, session) {
         print(numbers_input())
         grDevices::dev.off()
       })
-    
-    # #Sample Coverage plot (Seemed to not be understood by many and depends on DEP package)
-    # coverage_input <- reactive({
-    #   plot_coverage_new(norm())
-    # })
-    # output$coverage <- renderPlot({
-    #   QCreport$coverage<-coverage_input()
-    #   coverage_input()
-    # })
-    # output$downloadCoverage <- downloadHandler(
-    #   filename = function() {
-    #     paste('coverage-', fileName ,Sys.Date(), '.pdf', sep='') },
-    #   content = function(file) {
-    #     pdf(file)
-    #     print(coverage_input())
-    #     dev.off()
-    #   })
-    # 
-    
-    # -- Depends on DEP
-    # #Missing value_heatmap
-    # missval_input <- reactive({
-    #   plot_missval(norm())
-    # })
-    # 
-    # output$missval <- renderPlot({
-    #   QCreport$missval<-missval_input()
-    #   # utils::str(missval_input())
-    #   missval_input()
-    # })
-    # output$downloadMissval <- downloadHandler(
-    #   filename = function() {
-    #     paste('missing_values_heatmap-', fileName ,Sys.Date(), '.pdf', sep='') },
-    #   content = function(file) {
-    #     pdf(file)
-    #     print(missval_input())
-    #     dev.off()
-    #   })
-    
-    
-    #Missing value _quant plot
-  #  detect_input <- shiny::reactive({
-  #    plot_detect(norm())
-  #  })
-  #  output$detect <- renderPlot({
-  #    QCreport$detect<-detect_input()
-  #    detect_input()
-  #  })
-  #  output$downloadDetect <- downloadHandler(
-  #    filename = "missing_values_quant.pdf",
-  #    content = function(file) {
-  #      grDevices::pdf(file)
-  #      gridExtra::grid.arrange(QCreport$detect)
-  #      grDevices::dev.off()
-  #    })                         
 
-    
-    
-    #Imputation plot
-  # imputation_input <- shiny::reactive({
-  #   plot_imputation_new(norm(),imp())
-  # })
-  # output$imputation <- shiny::renderPlot({
-  #   QCreport$impute<-imputation_input()
-  #   imputation_input()
-  # })
-  # output$downloadImputation <- shiny::downloadHandler(
-  #   filename = "imputation.pdf",
-  #   content = function(file) {
-  #     pdf(file)
-  #     print(QCreport$impute)
-  #     dev.off()
-  #   })
-    
     #Sample-to-Sample Heatmap
     StSheatmap_input <- shiny::reactive({
       log2tansform(TRUE)
@@ -779,6 +607,7 @@ server <- function(input, output, session) {
       
       plot_StS_heatmap(original, corr = corr)
     })
+    
     output$StS_heatmap <- shiny::renderPlot({
       QCreport$StSDistMetric = input$distanceMetric
       QCreport$StSheatmap <- StSheatmap_input()
@@ -1527,68 +1356,7 @@ server <- function(input, output, session) {
     }
   ) 
   
-  # output$report <- shiny::downloadHandler(
-  #   # For PDF output, change this to "report.pdf"
-  #   #filename = "report.pdf",
-  #   filename = "report.html",
-  #   
-  #   content = function(filename) {
-  #     # Copy the report file to a temporary directory before processing it, in
-  #     # case we don't have write permissions to the current working dir (which
-  #     # can happen when deployed).
-  #   
-  #     
-  #     # Set up parameters to pass to Rmd document
-  #     params <- list(
-  #       pca = QCreport$pca,
-  #       TSdetect = QCreport$TSdetect,
-  #       #norm = QCreport$norm,
-  #       number= QCreport$number,
-  #       coverage = QCreport$coverage,
-  #       missval = QCreport$missval,
-  #       detect = QCreport$detect,
-  #       impute = QCreport$impute,
-  #       StSheatmap = QCreport$StSheatmap,
-  #       StSheatmapDistMetric = QCreport$StSDistMetric,
-  #       cumsum =QCreport$cumsum,
-  #       linesFromMaxQuant = reportBlocks$linesFromMaxQuant,
-  #       stats_proteinGroups = reportBlocks$stats_proteinGroups,
-  #       volcano_plot = reportBlocks$volcano_plot,
-  #       boxPlotUp = reportBlocks$boxPlotUp,
-  #       boxPlotDown = reportBlocks$boxPlotDown,
-  #       ExpSetup = reportBlocks$ExpSetup,
-  #       UpRegul = limmaResult$df_up,
-  #       DoRegul = limmaResult$df_down,
-  #       gsea_volcano_plot=reportBlocks$gsea_volcano_plot,
-  #       gseaSetup = reportBlocks$gseaSetup,
-  #       gseaUpRegul = gsea_regul$up,
-  #       gseaDoRegul = gsea_regul$down,
-  #       separateValuesGSEA = reportBlocks$separateValuesGSEA
-  #     )
-  #     
-  #     shiny::withProgress(message = 'Generating Report', {
-  #       for (i in 1:15) {
-  #         incProgress(1/15)
-  #         Sys.sleep(0.25)
-  #       }
-  #     })
-  #     #uploadName = paste('EatomicsReport-', Sys.Date(), Sys.time(), '.html', sep = '')
-  #     #drive_upload("report.html", name = uploadName)
-  #     
-  #     # Knit the document, passing in the `params` list, and eval it in a
-  #     # child of the global environment (this isolates the code in the document
-  #     # from the code in this app).
-  #     rmarkdown::render(input = "report.Rmd", 
-  #                     output_file = paste('EatomicsReport_', Sys.time(), '.html', sep = ''),
-  #                      output_dir  = getwd(),
-  #                      clean = TRUE,
-  #                      quiet = TRUE, 
-  #                       params = params,
-  #                       envir = new.env(parent = globalenv())
-  #     )
-  #     
-  #   }
-  # )
+
   
   ###3 ssGSEA tab 
   
@@ -1648,22 +1416,6 @@ server <- function(input, output, session) {
       ssgsea_data$file = list.files(path = paste(sessionID, "/", sep = ""))
     }
   })
-
-# observe({
-#   ssgsea_data$prefix
-#   output$diff.gs.collection <- renderUI({
-#     selectInput(
-#       inputId = "diff.gs.collection_file", 
-#       label = strong("Choose enrichment score file"),
-#       choices = gs_file_list(),
-#       multiple = FALSE,
-#       selectize = TRUE
-#     )
-#   })
-#   
-# })
-
-
 
   callModule(module = expDesignModule, id = "gsea", 
              ssgsea_data_update = reactive(ssgsea_data$prefix),
@@ -1729,40 +1481,6 @@ server <- function(input, output, session) {
       )
     }
   })
-  
-  # shiny::observeEvent(input$expandFilterGSEA, {
-  #   output$filter_group_gsea<- renderUI({
-  #     shiny::selectInput(
-  #       inputId = "filter_GR_fatcorGSEA",
-  #       label = strong("Select a group to filter on"),
-  #       selected = 3,
-  #       choices = as.list(colnames(ClinData())),
-  #       multiple = FALSE,
-  #       selectize = TRUE
-  #     )
-  #   })
-   # output$filter_level_gsea <- shiny::renderUI({
-  #    shiny::req(input$filter_GR_fatcorGSEA)
-  #    if (ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$filter_GR_fatcorGSEA]=='logical'){
-  #      shiny::selectizeInput(inputId = "filter_levelsGSEA",
-  #                     label = "Select one group to include in the analysis",
-  #                     choices =  ClinData() %>% pull(input$filter_GR_fatcorGSEA) %>% levels(),
-  #                     multiple = FALSE
-  #      )
-  #      
-  #    } else #if(ClinColClasses()[,input$filter_GR_fatcorGSEA]=="numeric")
-  #    {
-  #      f = ClinData() %>% dplyr::pull(input$GR_fatcorGSEA)
-  #      shiny::sliderInput(
-  #        inputId = "filter_num.cutoffGSEA",
-  #        label = "Select cutoff to filter:",
-  #        min = min(f, na.rm = TRUE),
-  #        max = max(f, na.rm = TRUE),
-  #        value = colMeans(ClinData()[input$filter_GR_fatcorGSEA], na.rm = TRUE), round = T
-  #      )
-  #    }
-  #  })
-  #},ignoreNULL = FALSE, ignoreInit = TRUE)
 
   
   ClinDomitGSEA <- shiny::reactiveValues()
@@ -1830,12 +1548,6 @@ server <- function(input, output, session) {
     
   })
   
-  # Start sifnicifance analysis
-  # contrastMatrix<-eventReactive(input$filter,{
-  #    validate(need(data() , "Please upload a proteinGroups file first."))
-  #    validate(need(ClinData() , "Please upload a clinical information file first."))
-  #    
-  #    req(clinDataMatch())
   
   reducedscore<-shiny::reactiveValues()
   signGSEAResultsGroups <- shiny::eventReactive(input$filterGSEA,{
@@ -1880,13 +1592,7 @@ server <- function(input, output, session) {
     reduced 
     
   })
-  
-  # Diff <- reactive({
-  #   Ind = which(signGSEAResultsGroups()$p.value<0.05)
-  #   DiffNames  =   signGSEAResultsGroups()[Ind,c("Gene Set","p.value")]
-  #   list(Ind, DiffNames)
-  # })
-  
+
   
   diffgsea_input<- shiny::eventReactive(input$filterGSEA,{
     #reactive({
