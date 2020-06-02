@@ -924,8 +924,9 @@ server <- function(input, output, session) {
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
   
   shiny::observe({
+    shiny::req(input$GR_fatcor)
     ClinColClasses()[input$GR_fatcor] != "numeric"
-    showNotification("Pleas make sure that you have selected a continuous variable.")
+    shiny::showNotification("Pleas make sure that you have selected a continuous variable.")
     shiny::updateCheckboxInput(session, "ContinChoice", value = FALSE)
   })
   shiny::observe({
