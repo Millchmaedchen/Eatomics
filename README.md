@@ -30,6 +30,13 @@ Access to demo data is possible directly via the upload button if ou are testing
 
 ## 4. Troubleshooting 
 
+- On mac, in order to use the plotly functions, e.g., in the volcabo plot, you will have to install Xquartz from https://www.xquartz.org/ and the Cairo package. The error message will contain a hint on the missing **Cairo** package. 
+
+```
+install.packages("Cairo")
+library(Cairo) 
+```
+
 - R version < 3.6 will need a lower version of caTools in order to create proper reports from rmarkdown - this might help to fix any caTools related errors.
 ```
 install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools_1.14.tar.gz", repos=NULL, type="source")
