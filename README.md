@@ -30,7 +30,7 @@ Access to demo data is possible directly via the upload button if ou are testing
 
 ## 4. Troubleshooting 
 
-- On mac, in order to use the plotly functions, e.g., in the volcabo plot, you will have to install Xquartz from https://www.xquartz.org/ and the Cairo package. The error message will contain a hint on the missing **Cairo** package. 
+- On mac, in order to use the plotly functions, e.g., in the volcabo plot, you will have to install Xquartz from https://www.xquartz.org/ and the Cairo package. The error message will contain a hint on the missing **Cairo bitmap device**. 
 
 ```
 install.packages("Cairo")
