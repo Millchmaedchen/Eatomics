@@ -12,11 +12,11 @@ Within R studio please run
 ```
 install.packages("shiny")
 install.packages("devtools")
-install.packages("pacman")
 
 library(shiny)
 library(devtools)
-library(pacman)
+
+devtools::install_github('sfirke/janitor')
 
 runUrl("https://github.com/Millchmaedchen/Eatomics/archive/master.zip", subdir = "R")
 ```
@@ -30,11 +30,22 @@ Access to demo data is possible directly via the upload button if ou are testing
 
 ## 4. Troubleshooting 
 
+- On mac, in order to use the plotly functions, e.g., in the volcabo plot, you will have to install Xquartz from https://www.xquartz.org/ and the Cairo package. The error message will contain a hint on the missing **Cairo bitmap device**. 
+
+```
+install.packages("Cairo")
+library(Cairo) 
+```
+
 - R version < 3.6 will need a lower version of caTools in order to create proper reports from rmarkdown - this might help to fix any caTools related errors.
 ```
 install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools_1.14.tar.gz", repos=NULL, type="source")
 ```
 
+- if the installation of the rmarkdown or digest package fails and update of packages in general might help
+```
+update.packages(ask = FALSE, checkBuilt = TRUE)
+```
 # References
 
 1: Krug, K., et al., A Curated Resource for Phosphosite-specific Signature Analysis. Mol Cell Proteomics, 2019. 18(3): p. 576-593.
