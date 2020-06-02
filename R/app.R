@@ -754,6 +754,7 @@ server <- function(input, output, session) {
   
   shiny::observe({
     shiny::req(input$GR_fatcor)
+    shiny::req(input$ContinChoice)
     shiny::need(input$ContinChoice)
     ClinColClasses()[input$GR_fatcor] != "numeric"
     shiny::showNotification("Pleas make sure that you have selected a continuous variable.")
@@ -761,6 +762,7 @@ server <- function(input, output, session) {
   })
   shiny::observe({
     shiny::req(input$GR_fatcor)
+    shiny::req(input$ContinChoice)
     shiny::need(input$ContinChoice)
     input$GR_fatcor
     shiny::updateCheckboxInput(session, "expandFilter", value = FALSE)
@@ -1389,7 +1391,7 @@ server <- function(input, output, session) {
                  }) 
 
     ssgsea_data$prefix = ssgsea_obj
-    shinyalert::shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success", showConfirmButton = TRUE)                     
+    shinyalert::shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success", showConfirmButton = TRUE, timer = 5000)                     
 
   })
   
