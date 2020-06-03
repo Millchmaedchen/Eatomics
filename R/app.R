@@ -283,6 +283,7 @@ ui <- shiny::fluidPage(
 ## Server function
 server <- function(input, output, session) {
   reportBlocks <- shiny::reactiveValues()
+  session$onSessionEnded(function() { unlink(paste(sessionID, "/*.gct", sep = "")) })
   #push the filesize upload limit
   options(shiny.maxRequestSize = 10000*1024^2, expressions = 500000)
   
