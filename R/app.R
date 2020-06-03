@@ -722,6 +722,7 @@ server <- function(input, output, session) {
     
     output$filter_level_limma <- shiny::renderUI({
       req(input$filter_GR_fatcor)
+      browser()
       if (ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical'){
         shiny::selectizeInput(inputId = "filter_levels",
                        label = "Filter: Select groups to include in the analysis",
@@ -729,13 +730,14 @@ server <- function(input, output, session) {
                        multiple = TRUE
         )
       } else {
-        d = ClinDomit$data %>% dplyr::pull(input$filter_GR_fatcor)
+        d = ClinData() %>% dplyr::pull(input$filter_GR_fatcor)
         shiny::sliderInput(
           inputId = "filter_num.cutoff",
           label = "Select cutoff to divide numeric value:",
           min = min(d, na.rm = TRUE),
           max = max(d, na.rm = TRUE),
-          value = colMeans(ClinData()[input$filter_GR_fatcor], na.rm = TRUE), round = T
+          value = colMeans(ClinData()[input$filter_GR_fatcor], na.rm = TRUE), 
+          round = T
         )
       }
     })
@@ -754,9 +756,11 @@ server <- function(input, output, session) {
   shiny::observe({
     shiny::req(input$GR_fatcor)
     shiny::req(input$ContinChoice)
-    ClinColClasses()[input$GR_fatcor] != "numeric"
-    shiny::showNotification("Please make sure that you have selected a continuous variable.")
-    shiny::updateCheckboxInput(session, "ContinChoice", value = FALSE)
+    input$GR_fatcor
+    if(ClinColClasses()[input$GR_fatcor] != "numeric") {
+      shiny::showNotification("Please make sure that you have selected a continuous variable.")
+      shiny::updateCheckboxInput(session, "ContinChoice", value = FALSE)
+    }
   })
   shiny::observe({
     shiny::req(input$GR_fatcor)
@@ -896,8 +900,9 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$analyzeLimma ,{
-    limmaResult$gene_list = NULL
-   if (!is.null(need(proteinAbundance$original, "TRUE"))) {
+    limmaResult$gene_list = NULL #refresh volcano plot
+    
+   if (!is.null(need(proteinAbundance$original, "TRUE"))) { # check if protein abundance is loaded
       analyzeAlerts$somelist = c(TRUE, "Please upload a proteinGroups file first (previous tab).")  
     } else {analyzeAlerts$somelist = c(FALSE, NULL)}
     shiny::validate(need(proteinAbundance$original , "Validate statement"))
@@ -911,15 +916,14 @@ server <- function(input, output, session) {
     if (input$expandFilter == TRUE & input$ContinChoice == FALSE) {
       shiny::req(input$contrastLevels)
     }
-    if (!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) {
+    if ((!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) & ClinColClasses()[input$GR_fatcor]!='numeric') {
+      browser()
       analyzeAlerts$somelist = c(TRUE, "Please select two groups to compare.")  
-    #} else if (length(input$levels != 2)){
-    #  analyzeAlerts$somelist = c(TRUE, "Please select exactly two groups to compare.")  
+      shiny::validate(need(input$levels, "Validate statement"))
+      shiny::validate(need(length(input$levels) == 2, "Validate statement." ))
     }
     else {analyzeAlerts$somelist = c(FALSE, NULL)}
     
-    shiny::validate(need(input$levels, "Validate statement"))
-    shiny::validate(need(length(input$levels) == 2, "Validate statement." ))
     if (is.null(input$contrastLevels)){
       contrastLevels = input$levels
     } else{
