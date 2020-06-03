@@ -230,9 +230,9 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         mutate_if(is.character, as.factor)
       #%>% 
       #dplyr::select(-c(!!mainParameter)) 
-      colnames(ClinDomit$data)[colnames(ClinDomit$data) == "categorizedParameter"] = paste(input$GR_fatcor_gsea, "cat", sep = "_", collapse = "_") %>% janitor::clean_names() 
+      colnames(ClinDomit$data)[colnames(ClinDomit$data) == "categorizedParameter"] = paste(input$GR_fatcor_gsea, "cat", sep = "_", collapse = "_") %>% janitor::make_clean_names() 
       ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
-      ClinDomit$mainParameter = paste(input$GR_fatcor_gsea,  "cat", sep = "_", collapse = "_") %>% janitor::clean_names() 
+      ClinDomit$mainParameter = paste(input$GR_fatcor_gsea,  "cat", sep = "_", collapse = "_") %>% janitor::make_clean_names() 
     }
     if (is.null(need(input$expandFilter_gsea, FALSE)) & is.null(need(input$filter_GR_fatcor, FALSE))) {
       
