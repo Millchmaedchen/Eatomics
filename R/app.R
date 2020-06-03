@@ -160,7 +160,8 @@ ui <- shiny::fluidPage(
                                            shiny::uiOutput("filter_level_limma")),
                           shiny::conditionalPanel("input.expandFilter == TRUE",
                                            shiny::uiOutput("selectContrast")),
-                          shiny::actionButton("analyzeLimma","Analyze",class = "btn-primary")
+                          shiny::actionButton("analyzeLimma", "Analyze",class = "btn-primary"),
+                          shiny::textOutput('analyzeAlerts')
                           
                         ),
                         
@@ -495,8 +496,6 @@ server <- function(input, output, session) {
       }
       check_table = t(as.matrix(check_table))
       check_table <- check_table[ , which(apply(check_table, 2, var) != 0)]
-      message("calculating prcomp (again)")
-
       cc<-stats::prcomp(na.omit(check_table),
                  scale. =TRUE, 
                  center = TRUE
@@ -517,7 +516,6 @@ server <- function(input, output, session) {
         labels = "PatientID"
         
       } else if (!is.null(input$labelCol) && input$labelCol != "PatientID") {
-        message(input$labelCol)
         dummy = dummy %>% left_join(., dplyr::select(ClinData(), PatientID, groups = input$labelCol))
         labels = "PatientID"
       }  else {
@@ -756,15 +754,14 @@ server <- function(input, output, session) {
   shiny::observe({
     shiny::req(input$GR_fatcor)
     shiny::req(input$ContinChoice)
-    shiny::need(input$ContinChoice)
     ClinColClasses()[input$GR_fatcor] != "numeric"
-    shiny::showNotification("Pleas make sure that you have selected a continuous variable.")
+    shiny::showNotification("Please make sure that you have selected a continuous variable.")
     shiny::updateCheckboxInput(session, "ContinChoice", value = FALSE)
   })
   shiny::observe({
     shiny::req(input$GR_fatcor)
     shiny::req(input$ContinChoice)
-    shiny::need(input$ContinChoice)
+    #shiny::need(input$ContinChoice)
     input$GR_fatcor
     shiny::updateCheckboxInput(session, "expandFilter", value = FALSE)
   })
@@ -780,7 +777,7 @@ server <- function(input, output, session) {
   ClinData <- shiny::reactive({
 
       shiny::validate(
-        need(input$ClinD != "", "Please select a file for upload or choose to use the database connection.")
+        need(input$ClinD != "", "Please provide a sample description file for upload on the previous tab.")
         #need(input$demo_clin_data != "", "Please select a file for upload or choose to use the database connection.")
       )
       clinfile$name <- input$ClinD
@@ -795,10 +792,10 @@ server <- function(input, output, session) {
                         skip_empty_rows = TRUE, 
                         locale = locale(decimal_mark = ",") # Todo: uncomment this for US/English seperator
     ) %>% janitor::remove_empty("cols") %>% dplyr::mutate_if(is.character, as.factor) %>% dplyr::mutate_if(is.logical, as.factor)
-     if(protfile$protfile$name == "proteinGroups.freeze.txt"){ ### TODO: Uncomment for public use!
-       ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
-       ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
-     }
+  #   if(protfile$protfile$name == "proteinGroups.freeze.txt"){ ### TODO: Uncomment for public use!
+  #     ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
+  #     ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
+   #  }
     ClinDomit$data = ClinData %>% janitor::clean_names()
     ClinData
   })
@@ -888,9 +885,23 @@ server <- function(input, output, session) {
     }, ignoreInit = TRUE
 #    , once = TRUE
     )
+  
+  analyzeAlerts <- reactiveValues("somelist" = c(FALSE, NULL))
+  
+  output$analyzeAlerts <- renderText({
+    input$analyzeLimma
+    if(analyzeAlerts$somelist[1] == TRUE) {
+      analyzeAlerts$somelist[2]
+    } else {""}
+  })
 
   observeEvent(input$analyzeLimma ,{
-    shiny::validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
+    limmaResult$gene_list = NULL
+   if (!is.null(need(proteinAbundance$original, "TRUE"))) {
+      analyzeAlerts$somelist = c(TRUE, "Please upload a proteinGroups file first (previous tab).")  
+    } else {analyzeAlerts$somelist = c(FALSE, NULL)}
+    shiny::validate(need(proteinAbundance$original , "Validate statement"))
+    
 
     mainParameter = janitor::make_clean_names(ClinDomit$mainParameter)
     if (!is.null(ClinDomit$filterParameter)) {
@@ -900,13 +911,21 @@ server <- function(input, output, session) {
     if (input$expandFilter == TRUE & input$ContinChoice == FALSE) {
       shiny::req(input$contrastLevels)
     }
+    if (!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) {
+      analyzeAlerts$somelist = c(TRUE, "Please select two groups to compare.")  
+    #} else if (length(input$levels != 2)){
+    #  analyzeAlerts$somelist = c(TRUE, "Please select exactly two groups to compare.")  
+    }
+    else {analyzeAlerts$somelist = c(FALSE, NULL)}
+    
+    shiny::validate(need(input$levels, "Validate statement"))
+    shiny::validate(need(length(input$levels) == 2, "Validate statement." ))
     if (is.null(input$contrastLevels)){
       contrastLevels = input$levels
     } else{
       contrastLevels = input$contrastLevels
     }
-    
-    covariates = input$covariates#, TODO: Set up instead of filter for example
+    covariates = input$covariates
     covariates = janitor::make_clean_names(covariates)
     
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
@@ -953,11 +972,15 @@ server <- function(input, output, session) {
     expDesign = matchedExpDesign(expDesign, proteinAbundance$original)
     ClinDomit$designMatrix = expDesign
   
-  
-  #observeEvent(input$analyzeLimma ,{
+    #even <- input$n %% 2 == 0
+    #shinyFeedback::feedbackWarning("n", !even, "Please select an even number")
+    
     shiny::req(ClinDomit$designMatrix)
-    shiny::validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
-    shiny::validate(need(sum(ClinDomit$designMatrix[,1])>=3, "The experimental design does not contain three or more samples to test on."))
+    
+    if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
+      analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
+    }
+    shiny::validate(need(sum(ClinDomit$designMatrix[,1])>=3, "Validate statement"))
 
     expDesignInst = ClinDomit$designMatrix %>% janitor::clean_names() 
     if (input$ContinChoice == FALSE){
@@ -1007,8 +1030,9 @@ server <- function(input, output, session) {
     input$adj.P.Val,
     input$logFC
   ),{
+    reportBlocks$volcano_plot = NULL
     shiny::req(limmaResult$gene_list)
-    gene_list<-limmaResult$gene_list
+    gene_list <- limmaResult$gene_list
     message("Genes in Limma: ", nrow(gene_list))
     gene_list$threshold = as.factor(abs(gene_list$logFC) > input$logFC & gene_list$adj.P.Val < input$adj.P.Val)
     
