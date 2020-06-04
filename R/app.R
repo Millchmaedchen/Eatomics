@@ -355,18 +355,19 @@ server <- function(input, output, session) {
   #Remove user defined columns/samples
   ## Filter samples UI elements
   output$filt = shiny::renderUI({
-    if (!is.null(data())){
+    #if (!is.null(data())){
+    req(data())
       insty<-insty()
       shiny::selectizeInput("filt",
                      "Exclude columns (samples)",
                      choices=colnames(insty),
                      multiple = TRUE,
                      selected=input$filt)
-    } else {
-      shiny::selectizeInput("filt",
-                     "Exclude columns (samples)",
-                     choices=colnames(insty))
-    }
+    #} else {
+    #  shiny::selectizeInput("filt",
+    #                 "Exclude columns (samples)",
+    #                 choices=colnames(insty))
+    #}
   })
   
   ## Filter user defined columns/samples
