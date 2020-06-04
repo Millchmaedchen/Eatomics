@@ -151,14 +151,14 @@ ui <- shiny::fluidPage(
                           shiny::checkboxInput("imputeForLimma", "Impute missing values", FALSE),
                           #checkboxInput("remove_sv", "Remove surrogate variables", FALSE),
                           shiny::checkboxInput("includeCovariates", "Include parameters as covariates", FALSE), 
-                          shiny::conditionalPanel("input.includeCovariates == TRUE",
+                          shiny::conditionalPanel("input.includeCovariates == true",
                                            shiny::uiOutput("covariatesChoice")),
                           shiny::checkboxInput("expandFilter", "Stratification and filter",  FALSE),
-                          shiny::conditionalPanel("input.expandFilter == TRUE",
+                          shiny::conditionalPanel("input.expandFilter == true",
                                            shiny::uiOutput("filter_group_limma")),
-                          shiny::conditionalPanel("input.expandFilter == TRUE",
+                          shiny::conditionalPanel("input.expandFilter == true",
                                            shiny::uiOutput("filter_level_limma")),
-                          shiny::conditionalPanel("input.expandFilter == TRUE",
+                          shiny::conditionalPanel("input.expandFilter == true",
                                            shiny::uiOutput("selectContrast")),
                           shiny::actionButton("analyzeLimma", "Analyze",class = "btn-primary"),
                           shiny::textOutput('analyzeAlerts')
@@ -355,7 +355,7 @@ server <- function(input, output, session) {
   #Remove user defined columns/samples
   ## Filter samples UI elements
   output$filt = shiny::renderUI({
-    #if (!is.null(data())){
+    if (!is.null(data())){
     req(data())
       insty<-insty()
       shiny::selectizeInput("filt",
@@ -363,11 +363,11 @@ server <- function(input, output, session) {
                      choices=colnames(insty),
                      multiple = TRUE,
                      selected=input$filt)
-    #} else {
-    #  shiny::selectizeInput("filt",
-    #                 "Exclude columns (samples)",
-    #                 choices=colnames(insty))
-    #}
+    } else {
+      shiny::selectizeInput("filt",
+                     "Exclude columns (samples)",
+                     choices=colnames(insty))
+    }
   })
   
   ## Filter user defined columns/samples
