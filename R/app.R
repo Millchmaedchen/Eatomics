@@ -13,7 +13,7 @@ list_of_packages = c("shiny","shinythemes", 'shinycssloaders', "shinyalert", 'sh
 lapply(list_of_packages, 
        function(x) if(!require(x,character.only = TRUE)) install.packages(x, dependencies = TRUE))
 
-install.packages("https://cran.r-project.org/src/contrib/Archive/janitor/janitor_1.2.1.tar.gz", repos=NULL, type='source')
+#install.packages("https://cran.r-project.org/src/contrib/Archive/janitor/janitor_1.2.1.tar.gz", repos=NULL, type='source')
 
 # Load non-reactive helper functions 
 homeDir = getwd()
@@ -58,7 +58,6 @@ ui <- shiny::fluidPage(
                                                       'text/comma-separated-values,text/plain',
                                                       '.csv'))
                           ,
-                          br(),
                           br(),
                           shiny::radioButtons("insty", "Quantification type",
                                        choices = c("LFQ" = "LFQ","iBAQ" = "iBAQ"),
@@ -137,9 +136,13 @@ ui <- shiny::fluidPage(
                                                        shiny::plotOutput("CumSumPlot", height = 600),
                                                        shiny::downloadButton('downloadCumSumPlot', 'Save')
                                               )
-                        ),   
+                        ),
                         br()
                         )
+                      ),            
+                      hr(),
+                      div(class = "footer", style="text-align:center", "Impressum",
+                          shiny::includeHTML(paste(homeDir, "/../Impressum.html", sep = ""))
                       )
              ),
              shiny::tabPanel("Differential Expression",
@@ -200,6 +203,10 @@ ui <- shiny::fluidPage(
                           shiny::downloadButton("reportDataDL", "Download report data"),
                           br()
                         )
+                      ),            
+                      hr(),
+                      div(class = "footer", style="text-align:center", "Impressum",
+                          shiny::includeHTML(paste(homeDir, "/../Impressum.html", sep = ""))
                       )
                       
              ),
@@ -268,15 +275,27 @@ ui <- shiny::fluidPage(
                           
                           shinyalert::useShinyalert()
                         )
+                      ),            
+                      hr(),
+                      div(class = "footer", style="text-align:center", "Impressum",
+                          shiny::includeHTML(paste(homeDir, "/../Impressum.html", sep = ""))
                       )
              ), 
              
              shiny::tabPanel("Differential Enrichment",
                       #uiOutput("diff.gs.collection"),
-                      expDesignModule_UI(id = "gsea")
+                      expDesignModule_UI(id = "gsea"),            
+                      hr(),
+                      div(class = "footer", style="text-align:center", "Impressum",
+                          shiny::includeHTML(paste(homeDir, "/../Impressum.html", sep = ""))
+                      )
                  ),
             shiny::tabPanel("Help",icon = icon("info-circle"),
-                      shiny::includeHTML(paste(homeDir, "/../Vignette/Test2.html", sep = ""))
+                      shiny::includeHTML(paste(homeDir, "/../Vignette/Test2.html", sep = "")),            
+                      hr(),
+                      div(class = "footer", style="text-align:center", "Impressum",
+                          shiny::includeHTML(paste(homeDir, "/../Impressum.html", sep = ""))
+                      )
              )
   )
 )
