@@ -26,11 +26,11 @@ runUrl("https://github.com/Millchmaedchen/Eatomics/archive/master.zip", subdir =
 
 2. Demo_clinicaldata.txt: The sample description file - a tab separated text file as can be produced with any Office program by saving the spread sheet as .txt. The  file needs to contain a column named "PatientID", which matches the sample ID's from the proteinGroups header (without the "LFQ intensity" or "iBAQ" prefixes) and one or more named columns with "parameters", i.e. textual/factual/logical or continuous/integer values. Column names have to be unique.
 
-Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may directly use your own data or the demo files in Eatomics/Data from the github repository. The demo proteinGroups file represents a shortened version of the data assessed and described in Chen et al. [4] and is accompanied by a sample description file prepared by us, based on the publications supplementary data. 
+Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may directly use your own data or the demo files in Eatomics/Data from the github repository. The demo proteinGroups file represents a shortened version of the data assessed and described in Chen et al. [4] and is accompanied by a sample description file prepared by us, based on the publication's supplementary data. 
 
 ## 4. Troubleshooting 
 
-- On mac, in order to use the plotly functions, e.g., in the volcabo plot, you will have to install Xquartz from https://www.xquartz.org/ and the Cairo package. The error message will contain a hint on the missing **Cairo bitmap device**. 
+- On mac, in order to use the plotly functions, e.g., in the volcano plot, you will have to install Xquartz from https://www.xquartz.org/ and the Cairo package. The error message will contain a hint on the missing **Cairo bitmap device**. 
 
 ```
 install.packages("Cairo")
@@ -42,7 +42,7 @@ library(Cairo)
 install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools_1.14.tar.gz", repos=NULL, type="source")
 ```
 
-- if the installation of the rmarkdown or digest package fails and update of packages in general might help
+- if the installation of the rmarkdown or digest package fails an update of packages in general might help
 ```
 update.packages(ask = FALSE, checkBuilt = TRUE)
 ```
