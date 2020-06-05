@@ -927,7 +927,6 @@ server <- function(input, output, session) {
     } else {analyzeAlerts$somelist = c(FALSE, NULL)}
     shiny::validate(need(proteinAbundance$original , "Validate statement"))
     
-
     mainParameter = janitor::make_clean_names(ClinDomit$mainParameter)
     if (!is.null(ClinDomit$filterParameter)) {
       filterParameter = janitor::make_clean_names(ClinDomit$filterParameter)
@@ -937,7 +936,6 @@ server <- function(input, output, session) {
       shiny::req(input$contrastLevels)
     }
     if ((!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) & ClinColClasses()[input$GR_fatcor]!='numeric') {
-      browser()
       analyzeAlerts$somelist = c(TRUE, "Please select two groups to compare.")  
       shiny::validate(need(input$levels, "Validate statement"))
       shiny::validate(need(length(input$levels) == 2, "Validate statement." ))
@@ -1008,7 +1006,11 @@ server <- function(input, output, session) {
 
     expDesignInst = ClinDomit$designMatrix %>% janitor::clean_names() 
     if (input$ContinChoice == FALSE){
-      shiny::validate(need(sum(ClinDomit$designMatrix[,2])>=3, "The experimental design does not contain three or more samples to test on."))
+      if (!is.null(need(sum(ClinDomit$designMatrix[,2])>=3, "TRUE"))) {
+        analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
+      }
+      shiny::validate(need(sum(ClinDomit$designMatrix[,2])>=3, "Validate statement"))
+      
       validProteins =  proteinAbundance$original[, rownames(expDesignInst)]
       validProteins_1 = validProteins[,expDesignInst[,1]]
       validProteins_2 = validProteins[,expDesignInst[,2]]

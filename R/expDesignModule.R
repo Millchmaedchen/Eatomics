@@ -1,24 +1,25 @@
 expDesignModule_UI <- function(id) {
   ns <- NS(id)
-  sidebarLayout(
-    sidebarPanel(
-      uiOutput(ns("diff.gs.collection")),
-      uiOutput(ns("conditional_grouping")),
-       uiOutput(ns("conditional_subselect")),
-       checkboxInput(ns("ContinChoice_gsea"), "Use continuous response instead of grouping", FALSE),
+  shiny::sidebarLayout(
+    shiny::sidebarPanel(
+      shiny::uiOutput(ns("diff.gs.collection")),
+      shiny::uiOutput(ns("conditional_grouping")),
+      shiny::uiOutput(ns("conditional_subselect")),
+      shiny::checkboxInput(ns("ContinChoice_gsea"), "Use continuous response instead of grouping", FALSE),
       #checkboxInput("imputeFor_gsea", "Impute missing values", FALSE),
       #checkboxInput("remove_sv", "Remove surrogate variables", FALSE),
-      checkboxInput(ns("includeCovariates_gsea"), "Include parameters as covariates", FALSE),
-      conditionalPanel("input.includeCovariates_gsea == true", ns = ns, 
+      shiny::checkboxInput(ns("includeCovariates_gsea"), "Include parameters as covariates", FALSE),
+      shiny::conditionalPanel("input.includeCovariates_gsea == true", ns = ns, 
                        uiOutput(ns("covariatesChoice_gsea"))),
-      checkboxInput(ns("expandFilter_gsea"), "Stratification and filter",  FALSE),
-      conditionalPanel("input.expandFilter_gsea == true", ns = ns,
+      shiny::checkboxInput(ns("expandFilter_gsea"), "Stratification and filter",  FALSE),
+      shiny::conditionalPanel("input.expandFilter_gsea == true", ns = ns,
                        uiOutput(ns("filter_group_gsea"))),
-      conditionalPanel("input.expandFilter == true", ns = ns,
+      shiny::conditionalPanel("input.expandFilter == true", ns = ns,
                        uiOutput(ns("filter_level_gsea"))),
-      conditionalPanel("input.expandFilter_gsea == true", ns = ns,
+      shiny::conditionalPanel("input.expandFilter_gsea == true", ns = ns,
                        uiOutput(ns("selectContrast_gsea"))),
-      actionButton(ns("analyze_diff_gsea"),"Analyze",class = "btn-primary")
+      shiny::actionButton(ns("analyze_diff_gsea"),"Analyze",class = "btn-primary"),
+      shiny::textOutput(ns('analyzeAlerts'))
      ), 
     mainPanel(
       fluidRow(
@@ -94,7 +95,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                                                              NA. = col_logical()), skip = 2) %>% 
       mutate(`Gene names` = Name) 
   })
-  q
+  
   ClinColClasses <- reactive({
     req(ClinData())
     ClinDomit$data = ClinData() %>% janitor::clean_names()
@@ -281,8 +282,22 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   #    , once = TRUE
   )
   
+  analyzeAlerts <- reactiveValues("somelist" = c(FALSE, NULL))
+  
+  output$analyzeAlerts <- renderText({
+    input$analyzeLimma
+    if(analyzeAlerts$somelist[1] == TRUE) {
+      analyzeAlerts$somelist[2]
+    } else {""}
+  })
+  
   observeEvent(input$analyze_diff_gsea ,{
-    validate(need(proteinAbundance$original , "Please choose a file from the enrichment calculation first."))
+    limmaResult$gene_list = NULL #refresh volcano plot
+    
+    if (!is.null(need(proteinAbundance$original, "TRUE"))) { # check if protein abundance is loaded
+      analyzeAlerts$somelist = c(TRUE, "Please calculate enrichment scores first (previous tab).")  
+    } else {analyzeAlerts$somelist = c(FALSE, NULL)}
+    shiny::validate(need(proteinAbundance$original , "Validate statement"))
     
     mainParameter = janitor::make_clean_names(ClinDomit$mainParameter)
     if (!is.null(ClinDomit$filterParameter)) {
@@ -292,6 +307,13 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     if (input$expandFilter_gsea == TRUE & input$ContinChoice_gsea == FALSE) {
       req(input$contrastLevels)
     }
+    if ((!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) & ClinColClasses()[input$GR_fatcor_gsea]!='numeric') {
+      analyzeAlerts$somelist = c(TRUE, "Please select two groups to compare.")  
+      shiny::validate(need(input$levels, "Validate statement"))
+      shiny::validate(need(length(input$levels) == 2, "Validate statement." ))
+    }
+    else {analyzeAlerts$somelist = c(FALSE, NULL)}
+    
     if (is.null(input$contrastLevels)){
       contrastLevels = input$levels
     } else{
@@ -348,12 +370,20 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     #observeEvent(input$analyzeLimma ,{
     req(ClinDomit$designMatrix)
-    validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
-    validate(need(sum(ClinDomit$designMatrix[,1])>=3, "The experimental design does not contain three or more samples to test on."))
+   # validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
+  #  validate(need(sum(ClinDomit$designMatrix[,1])>=3, "The experimental design does not contain three or more samples to test on."))
+    if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
+      analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
+    }
+    shiny::validate(need(sum(ClinDomit$designMatrix[,1])>=3, "Validate statement"))
     
     expDesignInst = ClinDomit$designMatrix %>% janitor::clean_names()  
     if (input$ContinChoice_gsea == FALSE){
-      validate(need(sum(ClinDomit$designMatrix[,2])>=3, "The experimental design does not contain three or more samples to test on."))
+      if (!is.null(need(sum(ClinDomit$designMatrix[,2])>=3, "TRUE"))) {
+        analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
+      }
+      shiny::validate(need(sum(ClinDomit$designMatrix[,2])>=3, "Validate statement"))
+      #validate(need(sum(ClinDomit$designMatrix[,2])>=3, "The experimental design does not contain three or more samples to test on."))
       validProteins =  proteinAbundance$original[, rownames(expDesignInst)]
       validProteins_1 = validProteins[,expDesignInst[,1]]
       validProteins_2 = validProteins[,expDesignInst[,2]]
