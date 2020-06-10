@@ -160,8 +160,10 @@ ui <- shiny::fluidPage(
                           shiny::conditionalPanel("input.expandFilter == true",
                                            shiny::uiOutput("filter_group_limma")),
                           shiny::conditionalPanel("input.expandFilter == true",
+                                                  shiny::uiOutput("categorizeSecNum")),
+                          shiny::conditionalPanel("input.expandFilter == true && input.ContinChoice == true",
                                            shiny::uiOutput("filter_level_limma")),
-                          shiny::conditionalPanel("input.expandFilter == true",
+                          shiny::conditionalPanel("input.expandFilter == true && input.ContinChoice == false",
                                            shiny::uiOutput("selectContrast")),
                           shiny::actionButton("analyzeLimma", "Analyze",class = "btn-primary"),
                           shiny::textOutput('analyzeAlerts')
@@ -740,26 +742,40 @@ server <- function(input, output, session) {
       )
     })
     
+   output$categorizeSecNum <- shiny::renderUI({
+     if (ClinColClasses()[input$filter_GR_fatcor]=='numeric') {
+       d = ClinData() %>% dplyr::pull(input$filter_GR_fatcor)
+       shiny::sliderInput(
+         inputId = "filter_num.cutoff",
+         label = "Select cutoff to divide numeric value:",
+         min = min(d, na.rm = TRUE),
+         max = max(d, na.rm = TRUE),
+         value = colMeans(ClinData()[input$filter_GR_fatcor], na.rm = TRUE), 
+         round = T
+       )
+     } else {NULL}
+
+   }) 
+
     output$filter_level_limma <- shiny::renderUI({
       req(input$filter_GR_fatcor)
-      browser()
-      if (ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical'){
+      if (ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical' | ClinColClasses_2()[ClinDomit$filterParameter]=='factor'){
         shiny::selectizeInput(inputId = "filter_levels",
                        label = "Filter: Select groups to include in the analysis",
                        choices = ClinData() %>% dplyr::pull(input$filter_GR_fatcor) %>% levels(),
                        multiple = TRUE
         )
-      } else {
-        d = ClinData() %>% dplyr::pull(input$filter_GR_fatcor)
-        shiny::sliderInput(
-          inputId = "filter_num.cutoff",
-          label = "Select cutoff to divide numeric value:",
-          min = min(d, na.rm = TRUE),
-          max = max(d, na.rm = TRUE),
-          value = colMeans(ClinData()[input$filter_GR_fatcor], na.rm = TRUE), 
-          round = T
-        )
-      }
+      } #else {
+        #d = ClinData() %>% dplyr::pull(input$filter_GR_fatcor)
+        #shiny::sliderInput(
+        #  inputId = "filter_num.cutoff",
+        #  label = "Select cutoff to divide numeric value:",
+        #  min = min(d, na.rm = TRUE),
+        #  max = max(d, na.rm = TRUE),
+        #  value = colMeans(ClinData()[input$filter_GR_fatcor], na.rm = TRUE), 
+        #  round = T
+        #)
+      #}
     })
     output$selectContrast <- shiny::renderUI({
       req(ClinDomit$mainParameter)
@@ -841,7 +857,8 @@ server <- function(input, output, session) {
   shiny::observeEvent(c(input$filter_GR_fatcor, 
                  input$GR_fatcor,
                  input$ContinChoice, 
-                 input$num.cutoff 
+                 input$num.cutoff,
+                 input$filter_num.cutoff
                  )
                , {
                  
@@ -867,7 +884,7 @@ server <- function(input, output, session) {
         
         ## categorize second numeric parameter
         ClinDomit$filterParameter =  janitor::make_clean_names(input$filter_GR_fatcor)
-        if (ClinColClasses_2()[ClinDomit$filterParameter]=='numeric') {
+        if (ClinColClasses()[input$filter_GR_fatcor]=='numeric') {
           req(input$filter_num.cutoff)
           ClinDomit$data = ClinDomit$data %>% 
             dplyr::mutate(filterParameter = 
@@ -877,9 +894,11 @@ server <- function(input, output, session) {
                      )) %>% 
             dplyr::mutate_if(is.character, as.factor)
           # if first parameter stays continuous, the second parameter becomes a filter and needs to be saved for experimental design creation 
-          if (ClinColClasses_2()[ClinDomit$mainParameter]=='numeric'){
+          if (ClinColClasses_2()[ClinDomit$mainParameter]=='numeric' & input$ContinChoice == TRUE){
             ## rename and save filter parameter
-            colnames(ClinDomit$data)[colnames(ClinDomit$data) == "filterParameter"] = paste(ClinDomit$filterParameter) 
+            colnames(ClinDomit$data)[colnames(ClinDomit$data) == "filterParameter"] = paste(ClinDomit$filterParameter, "cat", sep = "_", collapse = "_") %>% janitor::make_clean_names() 
+            ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
+            ClinDomit$filterParameter = paste(ClinDomit$filterParameter, "cat", sep = "_", collapse = "_") %>% janitor::make_clean_names() 
            # ClinDomit$filterParameter = input$filter_GR_fatcor
           } else {## unite cat first parameter and categorized second parameter, when first is cat or categorized
             ClinDomit$data = ClinDomit$data %>% 
@@ -953,7 +972,7 @@ server <- function(input, output, session) {
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
       ClinData = ClinDomit$data %>% 
         janitor::clean_names() %>% 
-        dplyr::select(patient_id, mainParameter, covariates, all_of(filterParameter)) %>% 
+        dplyr::select(patient_id, mainParameter, covariates, everything(filterParameter)) %>% 
         ggplot2::remove_missing() %>% 
         dplyr::filter(!!sym(filterParameter) %in% !!input$filter_levels) %>% 
         dplyr::select(-filterParameter)
@@ -1461,8 +1480,6 @@ server <- function(input, output, session) {
   
   
   ###4.Differential GSEA tab
-  #TODO introduce error handling into t-test function
-  #TODO enable to use imputation or not but give a hint that results will shrink dramatically if imputation is not used
 
   gs_file_list = observeEvent(ssgsea_data$prefix,{
     
@@ -1477,7 +1494,8 @@ server <- function(input, output, session) {
              ssgsea_data_update = reactive(ssgsea_data$prefix),
              gs_file_list = reactive(ssgsea_data$file),
              sessionID = sessionID,
-             ClinData = reactive(ClinDomit$data)
+             ClinData = ClinData
+             #ClinData = reactive(ClinDomit$data)
              )
   
   ClinDnamesGSEA <- shiny::reactive({
