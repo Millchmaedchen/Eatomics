@@ -97,7 +97,8 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     proteinAbundance$original = read_table2(paste(sessionID, "/", input$diff.gs.collection_file, sep = ""), 
                                             col_types = cols(Description = col_skip(), 
                                                              NA. = col_logical()), skip = 2) %>% 
-      mutate(`Gene names` = Name) 
+      mutate(`Gene names` = Name) %>% 
+      select(-c("Name", "NA."))
   })
   
   ClinColClasses <- reactive({
@@ -320,7 +321,8 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   })
   
   observeEvent(input$analyze_diff_gsea ,{
-    limmaResult$gene_list = NULL #refresh volcano plot
+    limmaResult$gene_list = NULL #refresh result list
+    reportBlocks$volcano_plot = NULL
     
     if (!is.null(need(proteinAbundance$original, "TRUE"))) { # check if protein abundance is loaded
       analyzeAlerts$somelist = c(TRUE, "Please calculate enrichment scores first (previous tab).")  
@@ -335,7 +337,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     if (input$expandFilter_gsea == TRUE & input$ContinChoice_gsea == FALSE) {
       req(input$contrastLevels)
     }
-    if ((!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) & ClinColClasses()[input$GR_fatcor_gsea]!='numeric') {
+    if ((!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) & ClinColClasses()[input$GR_fatcor_gsea]!='numeric' & input$expandFilter_gsea == FALSE) {
       analyzeAlerts$somelist = c(TRUE, "Please select two groups to compare.")  
       shiny::validate(need(input$levels, "Validate statement"))
       shiny::validate(need(length(input$levels) == 2, "Validate statement." ))
@@ -347,9 +349,13 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     } else{
       contrastLevels = input$contrastLevels
     }
+    browser()
+    reportBlocks$contrastLevels = contrastLevels
     
-    covariates = input$covariates#, TODO: Set up instead of filter for example
+    covariates = input$covariates#, 
     covariates = janitor::make_clean_names(covariates)
+    
+    reportBlocks$covariates = covariates
     
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
       
@@ -454,13 +460,16 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   
   #limma_input <- reactive({
   limma_input <- eventReactive(c(
-    #ClinDomit$designMatrix,
-    input$analyzeLimma ,
+    limmaResult$gene_list,
+    input$analyzeLimma,
     input$adj.P.Val,
     input$logFC
   ),{
+    #refresh volcano plot
+    reportBlocks$volcano_plot = NULL
+    browser()
     req(limmaResult$gene_list)
-    gene_list<-limmaResult$gene_list
+    gene_list <- limmaResult$gene_list
     message("Genes in Limma: ", nrow(gene_list))
     gene_list$threshold = as.factor(abs(gene_list$logFC) > input$logFC & gene_list$adj.P.Val < input$adj.P.Val)
     
@@ -476,6 +485,18 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
   })
   
+  # Conditional UI elements
+  output$labelColBox<- shiny::renderUI({
+    shiny::conditionalPanel(condition = need(ClinData(), FALSE) , 
+                            shiny::selectInput(
+                              inputId = ns("labelColBox"), 
+                              label = strong("Choose the clinical parameter for label colours"),
+                              choices = as.list("none" = "none", colnames(ClinData())),
+                              multiple = FALSE,
+                              selectize = TRUE
+                            )
+    )
+  }) 
   
   output$limma <- renderPlotly({
     req(limmaResult$gene_list)
@@ -497,7 +518,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     limmaResult$df_down<-limmaResult$down %>% tibble::rownames_to_column("Gene.name")
     
     
-    reportBlocks$volcano_plot<-limma_input()
+    reportBlocks$volcano_plot <- limma_input()
     
     #Prepare interactive plot, reactive title and legend
     
@@ -546,13 +567,12 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     input$up_rows_selected
     input$labelColBox
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
-    isolate(if(ClinColClasses()[input$GR_fatcor_gsea]=='factor' | input$ContinChoice_gsea == FALSE) {
+    if(ClinColClasses_2()[ClinDomit$mainParameter]=='factor' | input$ContinChoice_gsea == FALSE) {
       experimentalDesign = ClinDomit$designMatrix[,1:2] %>% rownames_to_column(var = "PatientID") %>% gather(key= group, value = value, -PatientID ) %>% filter(value > 0) %>% dplyr::select(-value) #%>% left_join(., ClinData()[, c("PatientID", input$filter_GR_fatcor, input$labelColBox)])
-      ClinData = ClinData()
       GR_fatcor = "group"
       reportBlocks$boxPlotUp = createBoxPlot( rows_selected = input$up_rows_selected, 
                                               proteinData = original, 
-                                              filter_GR_fatcor = input$filter_GR_fatcor, 
+                                              filter_GR_fatcor = ClinDomit$filterParameter, 
                                               ClinData = ClinData(), 
                                               experimentalDesign = experimentalDesign, 
                                               GR_fatcor = GR_fatcor, 
@@ -562,19 +582,19 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     } else if(input$ContinChoice_gsea == TRUE){
       reportBlocks$scatterPlotUp = createLineScatterPlot(input$up_rows_selected, original, ClinData(), input$GR_fatcor_gsea, limmaResult$df_up, input$labelColBox)
       return(reportBlocks$scatterPlotUp)
-    })
+    }
   })
   
   output$boxPlotDown <- renderPlot({
     validate(need(input$down_rows_selected, FALSE))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
-    if(ClinColClasses()[input$GR_fatcor_gsea]=='factor' | input$ContinChoice_gsea == FALSE) {
+    if(ClinColClasses_2()[ClinDomit$mainParameter]=='factor' | input$ContinChoice_gsea == FALSE) {
       experimentalDesign =  ClinDomit$designMatrix[,1:2] %>% rownames_to_column(var = "PatientID") %>% gather(key= group, value = value, -PatientID ) %>% filter(value > 0) %>% dplyr::select(-value) #%>% left_join(., ClinData()[, c("PatientID", input$filter_GR_fatcor, input$labelColBox)])
       ClinData = ClinData()
       GR_fatcor = "group"
       reportBlocks$boxPlotDown = createBoxPlot( rows_selected = input$down_rows_selected, 
                                                 proteinData = original, 
-                                                filter_GR_fatcor = input$filter_GR_fatcor, 
+                                                filter_GR_fatcor = ClinDomit$filterParameter, 
                                                 ClinData = ClinData, 
                                                 experimentalDesign = experimentalDesign, 
                                                 GR_fatcor = GR_fatcor, 
@@ -648,30 +668,30 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       dplyr::select(c("PatientID", 
                       GR_fatcor, 
                       limmaResult[s_up,]$Gene.name)) %>% 
-      gather(key = "Gene name", value = "log2 of LFQ value", c(limmaResult[s_up,]$Gene.name))# %>% 
+      gather(key = "Gene set", value = "Enrichment score", c(limmaResult[s_up,]$Gene.name))# %>% 
     PD[,GR_fatcor] = parse_factor(dplyr::pull(PD, GR_fatcor), include_na = FALSE)
     if (is.null(labelColBox) | labelColBox == "" | labelColBox =="none") {
-      groups = NULL
+      color = NULL
       labels = PD$PatientID
     } else if (!is.null(labelColBox) && labelColBox != "PatientID") {
       message(labelColBox)
       boxPlotSamples = tibble(PatientID = PD$PatientID)
       boxPlotSamples$PatientID <- parse_factor(boxPlotSamples$PatientID, include_na = FALSE)
       coloringFactor = ClinData[,c("PatientID", labelColBox)]
-      groups = pull(right_join(coloringFactor, boxPlotSamples)[,2, drop = FALSE])
+      color = pull(right_join(coloringFactor, boxPlotSamples)[,2, drop = FALSE])
       labels = PD$PatientID
     } else {
       message("Please select a different parameter for colouring")
-      groups = NULL
+      color = NULL
       labels = PD$PatientID
     }
     
-    BoxPlot = ggplot(PD, aes(x = get(GR_fatcor), y = `log2 of LFQ value`)) + 
+    BoxPlot = ggplot(PD, aes(x = get(GR_fatcor), y = `Enrichment score`)) + 
       geom_boxplot() +
-      geom_jitter(aes(colour = groups)) +
+      geom_jitter(aes(colour = color)) +
       #geom_text_repel(aes(label=labels), show.legend = F, size = 4) +
       labs(x = paste(GR_fatcor)) +
-      facet_wrap(~`Gene name`) +
+      facet_wrap(~`Gene set`) +
       theme_light()
     
     if (input$showLabels == TRUE) {
@@ -747,18 +767,13 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         #"* Input MaxQuant File:",protfile$name,
         #"* Input Clinicaldata File:",clinfile$name$name,
         "* Clinical grouping factor:", input$GR_fatcor_gsea,
-        "* Two groups to compare:", input$levels[1],",", input$levels[2],
-       # "* [Surrogate variable](http://bioconductor.org/packages/release/bioc/html/sva.html) removed:", input$remove_sv,
-       # "+ Number of surrogate variables: ",surrogat$num,
-      #  "* Impute missing values:",input$imputeForLimma,
-        "* Apply filters:", input$expandFilter_gsea,
-        " + Clinical Factor to filter: ", input$filter_GR_fatcor,
-        " + One group to filter:", input$filter_levels,
-        "* The samples contributing to limma are:","total",nrow(ClinDomit$designMatrix),";",input$levels[1],"(", sum(ClinDomit$designMatrix[1]),")","and",input$levels[2],"(", sum(ClinDomit$designMatrix[2]),")", 
+        "* Filter/stratification on:", input$filter_GR_fatcor,
+        "* Two groups to compare:", reportBlocks$contrastLevels[1],",", reportBlocks$contrastLevels[2],
+        "* The samples contributing to limma are:","total", nrow(ClinDomit$designMatrix),";",reportBlocks$contrastLevels[1],"(", sum(ClinDomit$designMatrix[1]),")","and", reportBlocks$contrastLevels[2],"(", sum(ClinDomit$designMatrix[2]),")", 
         #kable_input,
         scroll_box(kable_input,width = "70%", height = "200px"),
         "* Total number of genes in limma are:",nrow(limmaResult$gene_list),
-        "* The number of genes **upregulated** and **downregulated** in ",input$levels[1], " are ", nrow(limmaResult$up)," and " ,nrow(limmaResult$down), " respectively. ",
+        "* The number of genes **upregulated** and **downregulated** in ",reportBlocks$contrastLevels[1], " are ", nrow(limmaResult$up)," and " ,nrow(limmaResult$down), " respectively. ",
         "* The threshold used to highlight significant genes is [BH corrected](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust) adjusted P value of" , input$adj.P.Val, "and absolute log fold change of ",input$logFC 
         
       )))
