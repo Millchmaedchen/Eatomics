@@ -161,9 +161,9 @@ ui <- shiny::fluidPage(
                                            shiny::uiOutput("filter_group_limma")),
                           shiny::conditionalPanel("input.expandFilter == true",
                                                   shiny::uiOutput("categorizeSecNum")),
-                          shiny::conditionalPanel("input.expandFilter == true && input.ContinChoice == true",
+                          shiny::conditionalPanel("input.expandFilter == true",
                                            shiny::uiOutput("filter_level_limma")),
-                          shiny::conditionalPanel("input.expandFilter == true && input.ContinChoice == false",
+                          shiny::conditionalPanel("input.expandFilter == true",
                                            shiny::uiOutput("selectContrast")),
                           shiny::actionButton("analyzeLimma", "Analyze",class = "btn-primary"),
                           shiny::textOutput('analyzeAlerts')
@@ -699,7 +699,7 @@ server <- function(input, output, session) {
   })
   
   output$conditional_subselectGR_limma <- shiny::renderUI({
-    req(ClinData(), ClinColClasses(),input$GR_fatcor)
+    req(ClinData(), ClinColClasses(), input$GR_fatcor)
     if (ClinColClasses()[input$GR_fatcor]=='factor' | ClinColClasses()[input$GR_fatcor]=='logical' ){
       shiny::selectizeInput(inputId = "levels",
                      label= "Select two groups to compare",
@@ -732,7 +732,7 @@ server <- function(input, output, session) {
   
   shiny::observeEvent(input$expandFilter, {
     output$filter_group_limma<- shiny::renderUI({
-      selectInput(
+      shiny::selectInput(
         inputId = "filter_GR_fatcor",
         label = strong("Select a second parameter"),
         selected = 3,
@@ -754,12 +754,14 @@ server <- function(input, output, session) {
          round = T
        )
      } else {NULL}
-
    }) 
 
     output$filter_level_limma <- shiny::renderUI({
       req(input$filter_GR_fatcor)
-      if (ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical' | ClinColClasses_2()[ClinDomit$filterParameter]=='factor'){
+      req(ClinDomit$filterParameter)
+      if (#(ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical') & 
+        input$ContinChoice == TRUE){
+     # if (ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical' | ClinColClasses_2()[ClinDomit$filterParameter]=='factor'){
         shiny::selectizeInput(inputId = "filter_levels",
                        label = "Filter: Select groups to include in the analysis",
                        choices = ClinData() %>% dplyr::pull(input$filter_GR_fatcor) %>% levels(),
@@ -779,13 +781,16 @@ server <- function(input, output, session) {
     })
     output$selectContrast <- shiny::renderUI({
       req(ClinDomit$mainParameter)
-      shiny::selectizeInput(inputId = "contrastLevels", 
-                     label = "Stratify: Select the two groups you want to calculate the difference on.",
-                     #choices = ClinData() %>% pull(mainParameter) %>% levels()
-                     choices = ClinDomit$data %>% dplyr::pull(ClinDomit$mainParameter) %>% levels(),
-                     multiple = TRUE, 
-                     options = list(maxItems = 2)
-      )
+      if (input$ContinChoice == FALSE){
+        shiny::selectizeInput(inputId = "contrastLevels", 
+                              label = "Stratify: Select the two groups you want to calculate the difference on.",
+                              #choices = ClinData() %>% pull(mainParameter) %>% levels()
+                              choices = ClinDomit$data %>% dplyr::pull(ClinDomit$mainParameter) %>% levels(),
+                              multiple = TRUE, 
+                              options = list(maxItems = 2)
+        )
+      }
+
     })
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
   
@@ -966,13 +971,17 @@ server <- function(input, output, session) {
     } else{
       contrastLevels = input$contrastLevels
     }
+    reportBlocks$contrastLevels = contrastLevels
+    
     covariates = input$covariates
+    reportBlocks$covariates = covariates
     covariates = janitor::make_clean_names(covariates)
+
     
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
       ClinData = ClinDomit$data %>% 
         janitor::clean_names() %>% 
-        dplyr::select(patient_id, mainParameter, covariates, everything(filterParameter)) %>% 
+        dplyr::select(patient_id, mainParameter, covariates, !!sym(filterParameter)) %>% 
         ggplot2::remove_missing() %>% 
         dplyr::filter(!!sym(filterParameter) %in% !!input$filter_levels) %>% 
         dplyr::select(-filterParameter)

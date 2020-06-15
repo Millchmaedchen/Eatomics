@@ -109,8 +109,21 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     df = lapply(df, class)
   })
   
-  output$conditional_grouping <- renderUI({
-    selectInput(
+  # Conditional UI elements
+  output$labelColBox<- shiny::renderUI({
+    shiny::conditionalPanel(condition = need(ClinData(), FALSE) , 
+                            shiny::selectInput(
+                              inputId = ns("labelColBox"), 
+                              label = strong("Choose the clinical parameter for label colours"),
+                              choices = as.list("none" = "none", colnames(ClinData())),
+                              multiple = FALSE,
+                              selectize = TRUE
+                            )
+    )
+  }) 
+  
+  output$conditional_grouping <- shiny::renderUI({
+    shiny::selectInput(
       inputId = ns("GR_fatcor_gsea"), 
       label = strong("Select the clinical grouping factor"),
       choices = as.list(colnames(ClinData())),
@@ -119,21 +132,18 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     )
   })
   
-
-  output$conditional_subselect <- renderUI({
-    req(ClinData, 
-        #ClinColClasses(), 
-        input$GR_fatcor_gsea)
+  output$conditional_subselect <- shiny::renderUI({
+    req(ClinData, input$GR_fatcor_gsea)
     if (ClinColClasses()[input$GR_fatcor_gsea]=='factor' | ClinColClasses()[input$GR_fatcor_gsea]=='logical' ){
-      selectizeInput(inputId = ns("levels"),
+      shiny::selectizeInput(inputId = ns("levels"),
                      label= "Select two groups to compare",
                      choices = ClinData() %>% pull(input$GR_fatcor_gsea) %>% levels(),
                      multiple = TRUE, 
                      options = list(maxItems = 2)
       )
     } else {
-      d = ClinData() %>% pull(input$GR_fatcor_gsea)
-      sliderInput(
+      d = ClinData() %>% dplyr::pull(input$GR_fatcor_gsea)
+      shiny::sliderInput(
         inputId = ns("num.cutoff"),
         label = "Select cutoff to divde numeric value:",
         min = min(d, na.rm = TRUE),
@@ -143,9 +153,9 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
   }) 
   
-  observeEvent(input$includeCovariates_gsea, {
-    output$covariatesChoice_gsea<- renderUI({
-      selectInput(
+  shiny::observeEvent(input$includeCovariates_gsea, {
+    output$covariatesChoice_gsea<- shiny::renderUI({
+      shiny::selectInput(
         inputId = ns("covariates"),
         label = strong("Select factors to include as covariates."),
         choices = as.list(colnames(ClinData())),
@@ -154,9 +164,9 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     })
   })
   
-  observeEvent(input$expandFilter_gsea, {
-    output$filter_group_gsea <- renderUI({
-      selectInput(
+  shiny::observeEvent(input$expandFilter_gsea, {
+    output$filter_group_gsea <- shiny::renderUI({
+      shiny::selectInput(
         inputId = ns("filter_GR_fatcor"),
         label = strong("Select a second parameter"),
         selected = 3,
@@ -180,7 +190,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       } else {NULL}
     }) 
     
-    output$filter_level_gsea <- renderUI({
+    output$filter_level_gsea <- shiny::renderUI({
       req(input$filter_GR_fatcor)
       req(ClinDomit$filterParameter)
       if (#(ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical') & 
@@ -204,8 +214,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     })
     output$selectContrast_gsea <- renderUI({
       req(ClinDomit$mainParameter)
-      if (#(ClinColClasses()[input$filter_GR_fatcor]=='factor' | ClinColClasses()[input$filter_GR_fatcor]=='logical') & 
-        input$ContinChoice_gsea == FALSE){
+      if (input$ContinChoice_gsea == FALSE){
       selectizeInput(inputId = ns("contrastLevels"), 
                      label = "Stratify: Select the two groups you want to calculate the difference on.",
                      choices = ClinDomit$data %>% dplyr::pull(ClinDomit$mainParameter) %>% levels(),
@@ -349,32 +358,29 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     } else{
       contrastLevels = input$contrastLevels
     }
-    browser()
     reportBlocks$contrastLevels = contrastLevels
     
-    covariates = input$covariates#, 
+    covariates = input$covariates
+    reportBlocks$covariates = covariates
     covariates = janitor::make_clean_names(covariates)
     
-    reportBlocks$covariates = covariates
-    
     if (!is.null(ClinDomit$filterParameter) & ClinColClasses_2()[mainParameter] == "numeric") {
-      
       ClinData = ClinDomit$data %>% 
         janitor::clean_names()  %>% 
         dplyr::select(patient_id, mainParameter, covariates, !!sym(filterParameter)) %>% 
-        remove_missing() %>% 
+        ggplot2::remove_missing() %>% 
         dplyr::filter(!!sym(filterParameter) %in% !!input$filter_levels) %>% 
-        select(-filterParameter)
+        dplyr::select(-filterParameter)
     } else {
       ClinData = ClinDomit$data %>% 
         janitor::clean_names() %>% 
         dplyr::select(patient_id, mainParameter, covariates) %>% 
-        remove_missing() 
+        ggplot2::remove_missing() 
     }
     ClinColClasses = lapply(ClinData, class)
     
     if (input$ContinChoice_gsea == FALSE & ClinColClasses[ClinDomit$mainParameter]=='numeric')
-    {req(input$num.cutoff)}
+    {req(shiny::input$num.cutoff)}
     
     # Prep experimental design for first parameter being cat
     if (ClinColClasses[mainParameter]=='factor' | ClinColClasses[mainParameter]=='logical' ){
@@ -405,8 +411,6 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     #observeEvent(input$analyzeLimma ,{
     req(ClinDomit$designMatrix)
-   # validate(need(proteinAbundance$original , "Please upload a proteinGroups file first (previous tab)."))
-  #  validate(need(sum(ClinDomit$designMatrix[,1])>=3, "The experimental design does not contain three or more samples to test on."))
     if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
       analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
     }
@@ -467,7 +471,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   ),{
     #refresh volcano plot
     reportBlocks$volcano_plot = NULL
-    browser()
+
     req(limmaResult$gene_list)
     gene_list <- limmaResult$gene_list
     message("Genes in Limma: ", nrow(gene_list))
@@ -485,19 +489,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
   })
   
-  # Conditional UI elements
-  output$labelColBox<- shiny::renderUI({
-    shiny::conditionalPanel(condition = need(ClinData(), FALSE) , 
-                            shiny::selectInput(
-                              inputId = ns("labelColBox"), 
-                              label = strong("Choose the clinical parameter for label colours"),
-                              choices = as.list("none" = "none", colnames(ClinData())),
-                              multiple = FALSE,
-                              selectize = TRUE
-                            )
-    )
-  }) 
-  
+
   output$limma <- renderPlotly({
     req(limmaResult$gene_list)
     input$adj.P.Val
