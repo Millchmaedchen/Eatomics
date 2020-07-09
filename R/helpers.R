@@ -339,3 +339,17 @@ idmaker <- function(x){
   ids <- paste(lets,nums,sep="")                              # joining them together
   return(ids[1])
 }
+
+## add title, subtitle, captions to plots
+
+add_plot_info <- function(ggplot_item, plot_parameters) {
+  ggplot_item = ggplot_item + ggplot2::ggtitle(plot_parameters$title)
+  if(plot_parameters$subtitle != "") {
+    ggplot_item = ggplot_item + ggplot2::labs(subtitle = plot_parameters$subtitle)
+  }
+  if(plot_parameters$caption != "") {
+    ggplot_item = ggplot_item + ggplot2::labs(caption = plot_parameters$caption)
+  }
+return(ggplot_item)
+  }
+

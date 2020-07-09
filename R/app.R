@@ -25,6 +25,9 @@ source(paste(homeDir, '/ssGSEA_PSEA.R', sep = ""))
 # Load experimental design module
 source(paste(homeDir, '/expDesignModule.R', sep = ""))
 
+# Load download module
+source(paste(homeDir, '/plot_download_module.R', sep = ""))
+
 # Load available gene sets from Data 
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
@@ -112,7 +115,8 @@ ui <- shiny::fluidPage(
                                                        shiny::uiOutput("labelCol"),
                                                        shiny::checkboxInput("imputeforPCA", "Use imputed data for PCA", TRUE),
                                                        shiny::plotOutput("pca_input_samples", height = 800),
-                                                       shiny::downloadButton('downloadpca', 'Save')
+                                                       shiny::downloadButton('downloadpca', 'Save'), 
+                                                       downloadObjUI(id = "pca")  
                                               ),
 
                                               shiny::tabPanel(title = "Distribution overview",
@@ -556,7 +560,7 @@ server <- function(input, output, session) {
         biplot = biplot + 
           stat_ellipse(aes(group = groups, color = groups))
       }
-
+      
       biplot <- biplot + 
         ggplot2::ggtitle("Principal component analysis") +
         ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
@@ -571,15 +575,18 @@ server <- function(input, output, session) {
       QCreport$pca = biplot
       biplot
     })
+
     
     output$downloadpca <- shiny::downloadHandler(
       filename = "pca.pdf",
       content = function(file) {
+        plot_parameters = callModule(downloadObj, id = "pca", title = "Principal component analysis", filename = "pca.pdf")
+        QCreport$pca = add_plot_info(QCreport$pca, plot_parameters)
         grDevices::pdf(file)
         print(QCreport$pca)
         grDevices::dev.off()
-      })
-    
+    })
+
     #Distribution plot
     
     distributionPlot_input <- shiny::reactive({
@@ -1388,7 +1395,7 @@ server <- function(input, output, session) {
         "* The threshold used to highlight significant genes is [BH corrected](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust) adjusted P value of" , input$adj.P.Val, "and absolute log fold change of ",input$logFC 
         
       )))
-    shinyBS::bsCollapsePanel(p("Detailed description",style = "color:#18bc9c"),
+    shinyBS::bsCollapsePanel(p("Detailed description", style = "color:#18bc9c"),
                     reportBlocks$ExpSetup)
   })
   
