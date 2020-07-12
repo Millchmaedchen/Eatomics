@@ -841,8 +841,9 @@ server <- function(input, output, session) {
     ClinData = readr::read_tsv(clinfile$name$datapath, 
     #ClinData = readr::read_tsv(input$demo_clin_data$datapath, 
                         na =c("", "NA", "N/A","0","<Null>"),
-                        skip_empty_rows = TRUE, 
-                        locale = locale(decimal_mark = ",") # Todo: uncomment this for US/English seperator
+    # locale = locale(decimal_mark = ","), # Todo: uncomment this for US/English seperator
+                        skip_empty_rows = TRUE 
+
     ) %>% janitor::remove_empty("cols") %>% dplyr::mutate_if(is.character, as.factor) %>% dplyr::mutate_if(is.logical, as.factor)
   #   if(protfile$protfile$name == "proteinGroups.freeze.txt"){ ### TODO: Uncomment for public use!
   #     ClinData = ClinData %>% dplyr::rename(PatientID_DB = PatientID)
@@ -1099,13 +1100,15 @@ server <- function(input, output, session) {
     
     reportBlocks$volcano_plot = 
       ggplot2::ggplot(data=gene_list,aes(x=logFC, y=-log10(P.Value) , colour=threshold)) +
-      #ggtitle(paste(Factor,": ", names(ClinDomit$designMatrix)[2]," vs ", names(ClinDomit$designMatrix[1]), Filnames, collapse = "")) +
-      ggplot2::geom_point(shape=20, data = gene_list, aes(text= rownames(gene_list)), size = 1, alpha = 0.4) +
+      ggtitle("this should be a title") +
+    #  ggtitle(paste(ClinDomit$mainParameter,": ", names(ClinDomit$designMatrix)[2]," vs ", names(ClinDomit$designMatrix[1]), collapse = "")) +
+       ggplot2::geom_point(shape=20, data = gene_list, aes(text= rownames(gene_list)), size = 1, alpha = 0.4) +
       #labs(color = paste("Threshold \n adj.p < ", input$adj.P.Val, " and \n log2FC +/- ", input$logFC)) +
       ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold")) + 
       ggthemes::scale_color_tableau() +
       ggplot2::theme_light() +
-      ggplot2::theme(legend.title = element_blank())
+      #ggplot2::theme(legend.title = element_blank())
+      guides(color=guide_legend(title="Significant"))
 
   })
   
@@ -1133,6 +1136,7 @@ server <- function(input, output, session) {
     reportBlocks$volcano_plot<-limma_input()
     
     #Prepare interactive plot, reactive title and legend
+   
 
     if (!is.null(input$expandFilter) && input$expandFilter == TRUE) {
       Filnames = paste(" only ", input$filter_levels[1], collapse= "")
@@ -1150,25 +1154,25 @@ server <- function(input, output, session) {
     } else {
       title_begin =  paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
     })
-   
+
     pp <- plotly::ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
-      plotly::layout(
-        legend = list(title = list(text = paste("Threshold: \n adj.p < ", 
-                                                input$adj.P.Val, 
-                                                " \n and \n log2FC +/- ", 
-                                                input$logFC)
-                                   )), 
-        title = list(text = paste0('Volcano plot',
-                                   '<br>',
-                                   '<sup>',
-                                   title_begin,
-                                   collapse = "",
-                                   '</sup>'), 
-                     yref = "container", 
-                     yanchor = "bottom",
-                     pad = list(b = 20)
-        ),
-        margin = list(t = 75, b = 20)) 
+      plotly::layout(title = paste0('Volcano plot',
+                                      '<br>',
+                                      '<sup>',
+                                      title_begin,
+                                      collapse = "",
+                                       '</sup>'
+                                     ),
+                     legend = list(title =  paste0("Threshold: \n adj.p < ", 
+                                                               input$adj.P.Val, 
+                                                               " \n and \n log2FC +/- ", 
+                                                               input$logFC)#,
+                                                #side = "left", 
+                                               # bordercolor = '#444', 
+                                               # bgcolor = "blue"
+                                )
+                     )
+      
 
     pp
   })

@@ -524,31 +524,30 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     isolate(
       if (input$ContinChoice_gsea == FALSE){
         title_begin = paste(names(ClinDomit$designMatrix)[1], 
-                            " regulated when compared to ", 
+                            " changed when compared to ", 
                             names(ClinDomit$designMatrix[2]), 
                             Filnames, collapse = "")
       } else {
-        title_begin =  paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
+        title_begin =  paste("Gene sets regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
       })
     
-    pp <- ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
-      plotly::layout(
-        legend = list(title = list(text = paste("Threshold: \n adj.p < ", 
-                                                input$adj.P.Val, 
-                                                " \n and \n log2FC +/- ", 
-                                                input$logFC)
-        )), 
-        title = list(text = paste0('Volcano plot',
-                                   '<br>',
-                                   '<sup>',
-                                   title_begin,
-                                   collapse = "",
-                                   '</sup>'), 
-                     yref = "container", 
-                     yanchor = "bottom",
-                     pad = list(b = 20)
-        ),
-        margin = list(t = 75, b = 20)) 
+    pp <- plotly::ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
+      plotly::layout(title = paste0('Volcano plot',
+                                    '<br>',
+                                    '<sup>',
+                                    title_begin,
+                                    collapse = "",
+                                    '</sup>'
+      ),
+      legend = list(title =  paste0("Threshold: \n adj.p < ", 
+                                    input$adj.P.Val, 
+                                    " \n and \n log2FC +/- ", 
+                                    input$logFC)#,
+                    #side = "left", 
+                    # bordercolor = '#444', 
+                    # bgcolor = "blue"
+      )
+      )
     
     pp
   })
