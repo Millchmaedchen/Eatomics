@@ -5,10 +5,13 @@ output:
   html_document:
     theme: flatly
 params:
-  linesFromMaxQuant: NA
-  stats_proteinGroups: NA
   configuration: NA
- 
+  stats_proteinGroups: NA
+  volcano_plot: NA
+  boxPlotUp: NA
+  boxPlotDown: NA
+  UpRegul: NA
+  DoRegul: NA
 ---
 
 ```{r setup, include=FALSE}
@@ -21,7 +24,7 @@ The MaxQuant algrorithm identified `r params$stats_proteinGroups$NumFullProt` pr
 `r params$stats_proteinGroups$NumPotCon` potential contaminants, `r params$stats_proteinGroups$IdentifiedBySite` proteinsGroups only identified by site, and `r params$stats_proteinGroups$Reverse` proteins only identified in the reverse database were removed from the data set. The final dataset has `r params$stats_proteinGroups$Cleaned` rows. `r params$stats_proteinGroups$IntensityMetric` was used as intensity metric for single sample Gene Set Enrichment Analysis (ssGSEA) enrichment score calculation.
 Missing values are imputed using the `r params$stats_proteinGroups$Imputation` method. Imputation is based on knn (k-nearest-neighbour) from the impute package [1], MinDet or QRLIC from the imputeLCMD package with default parameters [2] or a custom implementation of Perseus' sampling from a down-shifted Gaussian distribution (replaceMissingFromGaussian(), implemented by Matthias Ziehm) with default parameters of width = 0.3 and shift = 1.8.
 
-## 2. single samples Gene Set Enrichment Analysis (ssGSEA)
+## 2. Single samples Gene Set Enrichment Analysis (ssGSEA)
 
 The calculation of ssGSEA (single-sample Gene Set Enrichment Analysis) scores is mainly a prerequisite to perform differential enrichment in step 4 and is adapted from Krug et al. [1] (https://github.com/broadinstitute/ssGSEA2.0). 
 
