@@ -54,15 +54,15 @@ expDesignModule_UI <- function(id) {
         )),
       
       br(),
-      #downloadButton("report", "Generate report"),
-      #downloadButton("reportDataDL", "Download report data"),
+      downloadButton(ns("report"), "Generate report"),
+      downloadButton(ns("reportDataDL"), "Download report data"),
       br()
     )
   )
 }
 
 # Function for module server logic
-expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, sessionID = NULL, gs_file_list = NULL, ClinData = NULL) {
+expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, sessionID = NULL, gs_file_list = NULL, ClinData = NULL, reportData = NULL) {
   ns <- session$ns
   
   #ClinData <- reactive({ClinData})
@@ -79,7 +79,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   
   observe({
     ssgsea_data_update
-    
+    browser()
     validate(need(!is.null(gs_file_list()), "Please perform ssGSEA on the previous tab first."))
     output$diff.gs.collection <- renderUI({
       selectInput(
@@ -735,15 +735,49 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       x = list("Upregulated.Proteins" = limmaResult$df_up, 
                "Downregulated.Proteins" = limmaResult$df_down,
                "Limma.ExpDesign" = ClinDomit$designMatrix %>% rownames_to_column("PatientID"),
-               "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2]))),
-               "Upregulated.GeneSets" = gsea_regul$df_up,
-               "Downregulated.GeneSets" = gsea_regul$df_down,
-               "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
-               "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap)
+               "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2])))
+               #,
+              # "Upregulated.GeneSets" = gsea_regul$df_up,
+              # "Downregulated.GeneSets" = gsea_regul$df_down,
+              # "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
+              # "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap
+               )
       openxlsx::write.xlsx(x, file, row.names = FALSE)
       dev.off()
     }
-  )
+  ) 
+  
+  output$report <- shiny::downloadHandler(
+    # For PDF output, change this to "report.pdf"
+    filename = paste('EatomicsReport_enrichment-', Sys.Date(), '.html', sep = ''),
+    content = function(file) {
+      # Copy the report file to a temporary directory before processing it, in
+      # case we don't have write permissions to the current working dir (which
+      # can happen when deployed).
+      tempReport <- file.path(tempdir(), "ssGSEA_Report.Rmd")
+      file.copy("ssGSEA_Report.Rmd", tempReport, overwrite = TRUE)
+      
+      # Set up parameters to pass to Rmd document
+      params <- list(
+        configuration = reportData, 
+        stats_proteinGroups = reportData$stats_proteinGroups,
+        volcano_plot = reportBlocks$volcano_plot,
+        boxPlotUp = reportBlocks$boxPlotUp,
+        boxPlotDown = reportBlocks$boxPlotDown,
+      #  ExpSetup = reportBlocks$ExpSetup,
+        UpRegul = limmaResult$df_up,
+        DoRegul = limmaResult$df_down
+      )
+      
+      # Knit the document, passing in the `params` list, and eval it in a
+      # child of the global environment (this isolates the code in the document
+      # from the code in this app).
+      rmarkdown::render(tempReport, output_file = file,
+                        params = params,
+                        envir = new.env(parent = globalenv())
+      )
+    }
+  ) 
   
   
   output$doc1 <- renderUI({

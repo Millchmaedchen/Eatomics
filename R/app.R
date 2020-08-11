@@ -119,10 +119,11 @@ ui <- shiny::fluidPage(
                                                        downloadObjUI(id = "pca")  
                                               ),
 
-                                              shiny::tabPanel(title = "Distribution overview",
-                                                       shiny::plotOutput("distributionPlot",height = 800) ,
-                                                       shiny::downloadButton('downloadDistributionPlot', 'Save')
-                                              ),
+                                             shiny::tabPanel(title = "Distribution overview",
+                                                             shiny::uiOutput("labelCol_d"),
+                                                             shiny::plotOutput("distributionPlot",height = 800) ,
+                                                             shiny::downloadButton('downloadDistributionPlot', 'Save')
+                                             ),
                                               shiny::tabPanel(title = "Protein coverage",
                                                        shiny::plotOutput("numbers", height = 800),
                                                        br(),
@@ -149,7 +150,7 @@ ui <- shiny::fluidPage(
                           shiny::includeHTML(paste(homeDir, "/../Impressum.html", sep = ""))
                       )
              ),
-             shiny::tabPanel("Differential Expression",
+             shiny::tabPanel(title = "Differential Abundance",
                       shiny::sidebarLayout(       
                         shiny::sidebarPanel(
                           shiny::uiOutput("conditional_grouping_limma"),
@@ -228,7 +229,7 @@ ui <- shiny::fluidPage(
                           
                           shiny::selectInput("sample.norm.type",
                                       label = "Select a normalization method",
-                                      choices = c("rank", "log", "log.rank", "none"),
+                                      choices = c("rank", "none"),
                                       selected = 1  
                           ),
                           shiny::numericInput("weight",
@@ -252,7 +253,7 @@ ui <- shiny::fluidPage(
                           ),
                           shiny::numericInput("min.overlap",
                                        label = "Select the minimum overlap between gene set and data",
-                                       value = 5
+                                       value = 10
                           ),
                           shiny::selectInput("correl.type",
                                       label = "Select correlation type", 
@@ -358,6 +359,8 @@ server <- function(input, output, session) {
       dplyr::filter(is.na(Reverse))
     
     stats_proteinGroups$Cleaned = proteinGroups %>% nrow()
+    stats_proteinGroups$IntensityMetric = input$insty
+    stats_proteinGroups$ImputationMethod = input$imputation
     reportBlocks$stats_proteinGroups = stats_proteinGroups
     
     message("Loaded ", stats_proteinGroups$NumFullProt, " rows from the provided proteinGroups-file. ", 
@@ -589,9 +592,30 @@ server <- function(input, output, session) {
 
     #Distribution plot
     
+    output$labelCol_d<- shiny::renderUI({
+      shiny::conditionalPanel(condition = need(ClinData(), FALSE) , 
+                              shiny::selectInput(
+                                inputId = "labelCol_d", 
+                                label = strong("Choose the clinical parameter for group colours"),
+                                choices = as.list("none" = "none", colnames(ClinData())),
+                                multiple = FALSE,
+                                selectize = TRUE
+                              )
+      )
+    })
+    
+    
     distributionPlot_input <- shiny::reactive({
+      if (is.null(input$labelCol_d) | input$labelCol_d == "" | input$labelCol_d == "none" ) {
+        dummy = NULL
+      } else if (!is.null(input$labelCol) && input$labelCol != "PatientID") {
+        dummy = dplyr::select(ClinData(), PatientID, groups = input$labelCol_d)
+      }  else {
+        message("Please select a different parameter for colouring")
+        dummy = dplyr::select(ClinData(), PatientID) %>% bind_cols(groups = rep("constant", length(.)))
+      }
       original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
-      plot_distribution(original)
+      plot_distribution(original, dummy)
     })
     
     output$distributionPlot <- shiny::renderPlot({
@@ -1147,12 +1171,12 @@ server <- function(input, output, session) {
     input$analyzeLimma 
     shiny::isolate(
     if (input$ContinChoice == FALSE){
-      title_begin = paste(names(ClinDomit$designMatrix)[1], 
-                                           " regulated when compared to ", 
+      title_begin = paste("Proteins with a change in abundacne in ", names(ClinDomit$designMatrix)[1], 
+                                           " when compared to \n", 
                                            names(ClinDomit$designMatrix[2]), 
                                            Filnames, collapse = "")
     } else {
-      title_begin =  paste("Proteins regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
+      title_begin =  paste("Proteins abundance with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
     })
 
     pp <- plotly::ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
@@ -1426,6 +1450,7 @@ server <- function(input, output, session) {
               StSheatmap = QCreport$StSheatmap,
               StSheatmapDistMetric = QCreport$StSDistMetric,
               cumsum =QCreport$cumsum,
+              distributionPlot = QCreport$distributionPlot,
               linesFromMaxQuant = reportBlocks$linesFromMaxQuant,
               stats_proteinGroups = reportBlocks$stats_proteinGroups,
               volcano_plot = reportBlocks$volcano_plot,
@@ -1470,15 +1495,25 @@ server <- function(input, output, session) {
     shiny::validate(need(proteinAbundance$original, "Please upload proteomics data first (previous tab)."))
     original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
     ssgsea_data$data = as.matrix(original)
+        ssgsea_data$gs_collection = input$gs.collection
+        ssgsea_data$sample.norm.type = input$sample.norm.type
+        ssgsea_data$weight = input$weight
+        ssgsea_data$statistic = input$statistic
+        ssgsea_data$output.score.type = input$output.score.type
+        ssgsea_data$nperm = input$nperm
+        ssgsea_data$min.overlap = input$min.overlap
+        ssgsea_data$correl.type = input$correl.type
+        ssgsea_data$output.prefix = input$output.prefix
+        ssgsea_data$linesFromMaxQuant = reportBlocks$linesFromMaxQuant
+        ssgsea_data$stats_proteinGroups = reportBlocks$stats_proteinGroups
 
-    shiny::withProgress(message = 'Calculation in progress',
-                 detail = 'An alert notification will appear upon download of the file', value = 1, {
-
-                   ssgsea_obj = ssGSEA2(input.ds = ssgsea_data$data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
-                                        weight = input$weight, statistic =input$statistic, output.score.type= input$output.score.type, 
-                                        #nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type,par=F,export.signat.gct=T,param.file=T, output.prefix= input$output.prefix)           
-                                        nperm = input$nperm, min.overlap   = input$min.overlap ,correl.type = input$correl.type, output.prefix= input$output.prefix, directory = sessionID)           
-                 }) 
+        shiny::withProgress(message = 'Calculation in progress',
+                            detail = 'An alert notification will appear upon download of the file', value = 1, {
+                              
+                              ssgsea_obj = ssGSEA2(input.ds = ssgsea_data$data, gene.set.databases = gene.set.databases[input$gs.collection], sample.norm.type = input$sample.norm.type,
+                                                   weight = input$weight, statistic = input$statistic, output.score.type = input$output.score.type, 
+                                                   nperm = input$nperm, min.overlap = input$min.overlap, correl.type = input$correl.type, output.prefix = input$output.prefix, directory = sessionID)           
+                            }) 
 
     ssgsea_data$prefix = ssgsea_obj
     shinyalert::shinyalert("Enrichment scores are ready - proceed to the next tabpanel.", type = "success", showConfirmButton = TRUE, timer = 5000)                     
@@ -1509,320 +1544,15 @@ server <- function(input, output, session) {
       ssgsea_data$file = list.files(path = paste(sessionID, "/", sep = ""))
     }
   })
-
+  
   callModule(module = expDesignModule, id = "gsea", 
              ssgsea_data_update = reactive(ssgsea_data$prefix),
              gs_file_list = reactive(ssgsea_data$file),
              sessionID = sessionID,
-             ClinData = ClinData
+             ClinData = ClinData, 
+             reportData = ssgsea_data
              #ClinData = reactive(ClinDomit$data)
-             )
-  
-  ClinDnamesGSEA <- shiny::reactive({
-    rownames(ClinData())
-  })
-  
-  ClinColClassesGSEA <- shiny::reactive({
-    df = ClinData()
-    lapply(df,class)
-  })
-  
-  selected_gs.collection <- shiny::reactive({
-    input$filterGSEA
-    nc<-max(count.fields(paste(gene.set.databases[input$diff.gs.collection], sep="")))
-    temp = shiny::isolate(t(read.table(paste(gene.set.databases[input$diff.gs.collection]),sep="", col.names=paste("V",1:nc,sep=""),fill=T)[,-2]))
-    
-    colnames(temp) = temp[1,]
-    temp[-1,]
-    
-  })
-  
-  selected_gsea.score <- shiny::reactive({
-    utils::read.delim(paste(sessionID, "/", input$diff.gs.collection, sep = ""), stringsAsFactors = F, skip=2, row.names='Name')
-
-  })
-  
-  output$conditional_groupingGSEA <- shiny::renderUI({
-    shiny::selectInput(
-      inputId = "GR_fatcorGSEA", 
-      label = strong("Select the clinical grouping factor"),
-      choices = as.list( colnames(ClinData())),
-      multiple = FALSE,
-      selectize = TRUE
-      # selected = c(1) 
-    )
-  })
-  
-  
-  output$conditional_subselectGRGSEA <- shiny::renderUI({
-    shiny::req(ClinData(),ClinColClassesGSEA())
-    if (ClinColClassesGSEA()[input$GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$GR_fatcorGSEA]=='logical'){
-      shiny::selectizeInput(inputId = "levelsGSEA",
-                     label= "Select two groups to compare",
-                     choices = ClinData() %>% dplyr::pull(input$GR_fatcorGSEA) %>% levels(),
-                     #selected = NULL,
-                     multiple = TRUE, 
-                     options = list(maxItems = 2)
-      )
-    } else {
-      d = ClinData() %>% dplyr::pull(input$GR_fatcorGSEA)
-      shiny::sliderInput(
-        inputId = "num.cutoffGSEA",
-        label = "Select cutoff to divde numeric value:",
-        min = min(d, na.rm = TRUE),
-        max = max(d, na.rm = TRUE),
-        value = colMeans(ClinData()[input$GR_fatcorGSEA], na.rm = TRUE), round = T
-      )
-    }
-  })
-
-  
-  ClinDomitGSEA <- shiny::reactiveValues()
-  
-  shiny::observeEvent(input$filterGSEA,{
-    if (ClinColClassesGSEA()[input$GR_fatcorGSEA]=='factor' | ClinColClassesGSEA()[input$GR_fatcorGSEA]=='logical'){
-      design_table<-cbind(ClinData()%>% dplyr::select(PatientID), ClinData()[input$GR_fatcorGSEA] == input$levelsGSEA[1], ClinData()[input$GR_fatcorGSEA]==input$levelsGSEA[2])
-      colnames(design_table)<-c("PatientID", input$levelsGSEA[1], input$levelsGSEA[2])
-      ind = which(design_table[input$levelsGSEA[1]] != design_table[input$levelsGSEA[2]])
-      testv = design_table[ind,]
-      ClinDomitGSEA$data <- testv
-    } else{
-      design_table<-as.data.frame(cbind(ClinData() %>% dplyr:: select(PatientID), ClinData()[input$GR_fatcorGSEA]<= input$num.cutoffGSEA,ClinData()[input$GR_fatcorGSEA]>input$num.cutoffGSEA))
-      colnames(design_table) <- make.names(c('PatientID', paste('less than or equal to',input$num.cutoffGSEA, sep='_'), paste('greater than',input$num.cutoffGSEA,sep='_')))
-      ClinDomitGSEA$data <- na.omit(design_table)
-
-    }
-    
-    if (input$expandFilterGSEA==TRUE){
-      Ind <- NULL
-      if (!is.null(input$filter_levelsGSEA)){
-        filterlevels = input$filter_levelsGSEA
-        for (i in 1:length(input$filter_levelsGSEA)) {
-          Ind = append(Ind, ClinData()[input$filter_GR_fatcorGSEA] == filterlevels[i])
-        }
-      } else if (!is.null(input$filter_num.cutoffGSEA)) {
-        Ind = which(ClinData()[,input$filter_GR_fatcorGSEA] <= input$num.cutoffGSEA)
-      }
-      if (!is.null(Ind)){
-        CD = ClinDomitGSEA$data
-        CD = na.omit(CD[Ind,])
-        ClinDomitGSEA$data <- CD
-        
-      }
-    }
-  })
-  
-  ERscore_names<-shiny::reactiveValues()
-  
-  allsamples <- shiny::reactive({  
-    test = selected_gsea.score()
-    
-    colnames(test) <- gsub(x = names( test),
-                           pattern = "\\.",
-                           replacement = " ")
-    ERscore_table<-test[,-1]
-    ERscore_names$data<- colnames(ERscore_table)
-    ERscore_table
-  })
-  
-  matchedSampleNamesGSEA <- shiny::reactive({
-    req(ClinDomitGSEA$data)
-    CD = ClinDomitGSEA$data
-    l = ERscore_names$data 
-    r = as.character(CD[,1])
-    match_gsea<-Reduce(intersect, list(l, r))
-  })
-  
-  clinDataMatchGSEA <-shiny::reactive({
-    shiny::req(ClinDomitGSEA$data)
-    CD = ClinDomitGSEA$data
-    
-    #match_Clindata <-CD[na.omit(matchedSampleNamesGSEA()),]
-    match_Clindata<-CD %>% dplyr::filter(PatientID %in% matchedSampleNamesGSEA())
-    
-  })
-  
-  
-  reducedscore<-shiny::reactiveValues()
-  signGSEAResultsGroups <- shiny::eventReactive(input$filterGSEA,{
-    shiny::validate(need(allsamples(), "There is no enrichment scores file available. Please execute the ssGSEA panel first."))
-    shiny::validate(need(ClinData() , "Please upload a clinical information file first."))
-    scoresTemp <- as.data.frame(allsamples())
-    selected_samplesTmp = matchedSampleNamesGSEA()
-    CD = ClinDomitGSEA$data
-    
-    group<-CD %>%
-      tidyr::gather(parameter,value,tail(names(CD), 2)) %>% tidyr::spread(value,parameter) %>% dplyr::select("PatientID",`TRUE`) %>% data.table::setnames("TRUE" ,input$GR_fatcorGSEA)
-    
-    tmpGroupingFactor = input$GR_fatcorGSEA
-    
-    scoresTemp = scoresTemp[,-dim(scoresTemp)[2]]
-    scoresTemp = as.data.frame(t(scoresTemp))
-    scoresTemp = scoresTemp %>% tibble::rownames_to_column() 
-    
-    scoresTemp2 = dplyr::left_join(scoresTemp, group, by = c("rowname"="PatientID"))
-    
-    #Remove all rows containing only NA's 
-    scoresTemp2 = scoresTemp2 %>% dplyr::filter_all(all_vars(!is.na(.))) %>% as.data.frame()
-    
-    #add_column(scoresTemp2, "new" = droplevels(scoresTemp2[,tmpGroupingFactor]))
-    scoresTemp2[,length(scoresTemp2)] <- droplevels(as.factor(scoresTemp2[,length(scoresTemp2)]))
-    
-    reducedscore$data<-scoresTemp2
-    
-    customT = function( x, a ){
-      dummy = dplyr::bind_cols("x" = x, "a" = a)
-      names(dummy) = c("x", "a")
-      tidy(stats::t.test(x= dplyr::filter(dummy, a == paste(levels(a)[1]))$x, y = dplyr::filter(dummy, a == paste(levels(a)[2]))$x))
-    }
-    signTempNew = scoresTemp2 %>% dplyr::select(-c("rowname", tmpGroupingFactor)) %>% 
-      apply(., 2, customT, as.factor(scoresTemp2[,length(scoresTemp2)]))
-    
-    reduced = dplyr::bind_rows(signTempNew)
-    reduced = tibble::add_column(reduced, "Gene Set" = names(signTempNew))
-    
-    reduced$FC<-gtools::foldchange( reduced$estimate1,  reduced$estimate2)
-    reduced$log_ratio <-gtools::foldchange2logratio(gtools::foldchange(reduced$estimate1,reduced$estimate2),base=2)
-    reduced 
-    
-  })
-
-  
-  diffgsea_input<- shiny::eventReactive(input$filterGSEA,{
-    #reactive({
-    t.test_list<-signGSEAResultsGroups()
-    message(paste("Pathways Enriched in",input$diff.gs.collection,"gene set:",nrow( t.test_list),sep = ' '))
-    #gene_list$threshold = as.factor(abs(gene_list$logFC) > input$logFC & gene_list$adj.P.Val < input$adj.P.Val)
-    
-    t.test_list$threshold = as.factor( t.test_list$p.value < 0.05/nrow(t.test_list))
-    
-    CDnames = colnames(as.data.frame(clinDataMatchGSEA()))
-    
-    if (!is.null(input$expandFilterGSEA) && input$expandFilterGSEA == TRUE) {
-      Filnames = paste(" only ", input$filter_levelsGSEA[1], collapse= "")
-    } else {
-      Filnames = ""
-    }
-    Factor = input$GR_fatcorGSEA
-    
-    ggplot2::ggplot(data= t.test_list, aes(x=log_ratio, y=-log10(p.value), colour=threshold)) +
-      ggplot2::ggtitle(paste(Factor,": ", CDnames[2]," vs ", CDnames[3], Filnames, collapse = "")) +
-      ggplot2::geom_point(shape=1, data = t.test_list, aes(text= `Gene Set`), size = 1, alpha = 0.4) +
-      xlim(-1,1) + #labs(color = "Adjusted p-value < 0.05") + 
-      ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold")) + ggthemes::scale_color_tableau() +
-      ggplot2::theme_light()+ ggplot2::theme(legend.title = element_blank())
-    
-  })
-  
-  
-  gsea_regul <- shiny::reactiveValues()
-  
-  output$diffgsea <- plotly::renderPlotly( {
-    t.test_list<-signGSEAResultsGroups()
-    t.test_list$P.adj = t.test_list$p.value*nrow(t.test_list)
-    ##select upregulated dataframe
-    gsea_up = input$up_gsea_selected
-    t.test_list$upregulated = as.factor(t.test_list$log_ratio> 0 & t.test_list$p.value < 0.05/nrow(t.test_list))
-    
-
-    gsea_regul$up <- stats::na.omit( t.test_list[ t.test_list$upregulated =="TRUE",])
-    gsea_regul$df_up<- gsea_regul$up %>% dplyr::rename("Geneset (upregulated)"= "Gene Set" )
-    
-    ##select down regulated dataframe
-    gsea_down = input$down_gsea_selected
-    t.test_list$downregulated = as.factor(t.test_list$log_ratio < 0 & t.test_list$p.value < 0.05/nrow(t.test_list))
-
-    gsea_regul$down <- stats::na.omit( t.test_list[ t.test_list$downregulated =="TRUE",])
-    gsea_regul$df_down<- gsea_regul$down %>% dplyr::rename("Geneset (downregulated)"= "Gene Set" )
-    reportBlocks$gsea_volcano_plot<-diffgsea_input()
-    
-    legendtitle <- list(yref='paper',xref="paper",y=1,x=1.1, text=paste("Threshold:\nadj.p < 0.05"), showarrow=F)
-    pp<-plotly::ggplotly(reportBlocks$gsea_volcano_plot, tooltip = "text")%>% plotly::layout(legend=list(y=0.89, yanchor="top"), annotations=legendtitle ) 
-    
-    pp
-    if (length(gsea_up)) {
-      pp<- reportBlocks$gsea_volcano_plot + ggplot2::geom_point(data = gsea_regul$df_up[gsea_up,], color='red')
-      
-    }
-    else if (length(gsea_down)) {
-      pp<- reportBlocks$gsea_volcano_plot + ggplot2::geom_point(data = gsea_regul$df_down[gsea_down,], color='green')
-    }
-    pp
-    
-  })
-  
-  output$pathway_up <- DT::renderDataTable({
-    df<-gsea_regul$df_up
-    
-    DT::datatable(df[, c("Geneset (upregulated)","log_ratio","P.adj")],rownames = FALSE,
-                  class = 'cell-border stripe',width= '150px',extensions ='Scroller', options = list(
-                    deferRender = TRUE,
-                    scrollY = 100,
-                    scroller = TRUE,
-                    scrollCollapse=TRUE,
-                    pageLength = 100, lengthMenu = c(5,10,50,100,200)
-                  )
-    )
-    
-  })
-  
-  output$pathway_down <- DT::renderDataTable({
-    
-    df<-gsea_regul$df_down
-    print(colnames(df))
-    DT::datatable(df[, c("Geneset (downregulated)","log_ratio","P.adj")],rownames = FALSE,
-                  class = 'cell-border stripe', 
-                  extensions ='Scroller',
-                  options = list(
-                    deferRender = TRUE,
-                    scrollY = 100,
-                    scroller = TRUE,
-                    scrollCollapse=TRUE,
-                    pageLength = 100, lengthMenu = c(5,10,50,100,200)
-                  )
-    )
-  })
-  
-  output$gsea_doc <- shiny::renderUI({
-    CD = as.data.frame(clinDataMatchGSEA())
-    CC= CD[, -1]
-    
-    kable_input<-knitr::kable(CD)%>% kableExtra::kable_styling(bootstrap_options = "striped") 
-    # kable_input<-knitr::kable(CD)
-    
-    reportBlocks$separateValuesGSEA <- list(
-      "diff.gs.collection" = input$diff.gs.collection, 
-      "gseafile" = gseafile$name$name,
-      "GR_fatcorGSEA" = input$GR_fatcorGSEA,
-      "groupGSEA_1" = input$levelsGSEA[1],
-      "groupGSEA_2" = input$levelsGSEA[2],
-      "expandFilterGSEA" = input$expandFilterGSEA,
-      "filter_GR_fatcorGSEA" = input$filter_GR_fatcorGSEA,
-      "filter_levelsGSEA"= input$filter_levelsGSEA
-    )
-    
-    reportBlocks$gseaSetup <- shiny::HTML(markdown::markdownToHTML(fragment.only=TRUE, text=c( 
-      "* Enriched Pathway Geneset:",input$diff.gs.collection,
-      "* Input Clinicaldata File:",gseafile$name$name,
-      "* Clinical grouping factor:", input$GR_fatcorGSEA,
-      "* Two groups compared:", input$levelsGSEA[1],",", input$levelsGSEA[2],
-      #"* Impute missing values:",input$imputeForLimma,
-      "* Apply filters:", input$expandFilterGSEA,
-      " + Clinical Factor to filter: ", input$filter_GR_fatcorGSEA,
-      " + One group to filter:", input$filter_levelsGSEA,
-      "* The samples contributing to differential pathway analysis:","total",nrow(CC),";",input$levelsGSEA[1],"(",length(which(CC[1]=="TRUE")),")","and",input$levelsGSEA[2],"(",length(which(CC[2]=="TRUE")),")", 
-      #kable_input,
-      kableExtra::scroll_box(kable_input,width = "70%", height = "200px"),
-      "* Total number of gene sets the comparison was performed on:",nrow(signGSEAResultsGroups()),
-      "* The number of pathways **upregulated** and **downregulated** in ",input$levelsGSEA[1], " are ", nrow(gsea_regul$up)," and " ,nrow(gsea_regul$down), " ,respectively. ",
-      "* The threshold used to highlight significant genes is [bonferroni corrected](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust) P value of 0.05" 
-      #input$adj.P.Val, "and absolute log fold change of ",input$logFC 
-      
-    )))
-    shinyBS::bsCollapsePanel(p("Detailed description",style = "color:#18bc9c"),
-                    reportBlocks$gseaSetup)
-  })
-  
+  )
   
   
   

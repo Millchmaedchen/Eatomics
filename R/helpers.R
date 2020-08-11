@@ -152,16 +152,25 @@ matchedExpDesign <- function(expDesign, proteinAbundance){
 #' @return
 #' @export
 
-plot_distribution <- function (proteinAbundance) {
+plot_distribution <- function (proteinAbundance, dummy = NULL) {
   proteinAbundance <- proteinAbundance %>% gather(key = "PatientID", value = "Abundance")
-  ggplot(proteinAbundance, aes(x = PatientID, y = Abundance), fill = "c") + 
+  browser()
+  if(!is.null(dummy)) {
+    proteinAbundance = left_join(proteinAbundance, dummy, by = c("PatientID" = "PatientID"))
+  }
+  tmp_plot = ggplot(proteinAbundance, aes(x = PatientID, y = Abundance, fill = groups)) + 
     geom_boxplot(notch = TRUE, na.rm = TRUE) +
     coord_flip() +
     labs(x = "SampleID", y = "Log2-transformed intensity") +
-    guides(fill=FALSE) +
-    scale_color_tableau() +
+    #guides(fill=FALSE) +
     theme_light() 
-
+  
+  if (is.numeric(dummy$groups)){
+    tmp_plot  = tmp_plot + ggthemes::scale_color_continuous_tableau("Red-Gold",na.value = "grey30") 
+  } else {
+    tmp_plot  = tmp_plot + ggthemes::scale_color_tableau()
+  }
+  tmp_plot
 }
 
 
@@ -171,7 +180,7 @@ plot_distribution <- function (proteinAbundance) {
 #' @return
 #' @export
 
-plot_proteinCoverage<-function (proteinAbundance) {
+plot_proteinCoverage <- function (proteinAbundance) {
   proteinAbundance <- proteinAbundance %>% gather(key = "SampleID", value = "Number of proteins") %>% group_by(SampleID) %>% summarise_all(list(~sum(!is.na(.))))
   ggplot(proteinAbundance, aes(x= SampleID, y= `Number of proteins`)) +
     geom_col() +
