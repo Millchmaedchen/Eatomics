@@ -51,9 +51,10 @@ expDesignModule_UI <- function(id) {
                plotOutput(ns("boxPlotUp")),
                plotOutput(ns("boxPlotDown")),
                htmlOutput(ns("doc1"))
-        )),
+        )
+        ),
       
-      br(),
+      #br(),
       #downloadButton("report", "Generate report"),
       #downloadButton("reportDataDL", "Download report data"),
       br()
@@ -62,7 +63,7 @@ expDesignModule_UI <- function(id) {
 }
 
 # Function for module server logic
-expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, sessionID = NULL, gs_file_list = NULL, ClinData = NULL) {
+expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, sessionID = NULL, gs_file_list = NULL, ClinData = NULL, reportData = NULL) {
   ns <- session$ns
   
   #ClinData <- reactive({ClinData})
@@ -743,7 +744,39 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       openxlsx::write.xlsx(x, file, row.names = FALSE)
       dev.off()
     }
-  )
+  ) 
+  
+  output$report <- shiny::downloadHandler(
+    # For PDF output, change this to "report.pdf"
+    filename = paste('EatomicsReport_enrichment-', Sys.Date(), '.html', sep = ''),
+    content = function(file) {
+      # Copy the report file to a temporary directory before processing it, in
+      # case we don't have write permissions to the current working dir (which
+      # can happen when deployed).
+      tempReport <- file.path(tempdir(), "ssGSEA_Report.Rmd")
+      file.copy("report.Rmd", tempReport, overwrite = TRUE)
+      
+      # Set up parameters to pass to Rmd document
+      params <- list(
+        configuration = reportData, 
+        stats_proteinGroups = reportData$stats_proteinGroups,
+        volcano_plot = reportBlocks$volcano_plot,
+        boxPlotUp = reportBlocks$boxPlotUp,
+        boxPlotDown = reportBlocks$boxPlotDown,
+      #  ExpSetup = reportBlocks$ExpSetup,
+        UpRegul = limmaResult$df_up,
+        DoRegul = limmaResult$df_down
+      )
+      
+      # Knit the document, passing in the `params` list, and eval it in a
+      # child of the global environment (this isolates the code in the document
+      # from the code in this app).
+      rmarkdown::render(tempReport, output_file = file,
+                        params = params,
+                        envir = new.env(parent = globalenv())
+      )
+    }
+  ) 
   
   
   output$doc1 <- renderUI({
