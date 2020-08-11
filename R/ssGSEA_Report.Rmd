@@ -1,0 +1,115 @@
+---
+title: "Eatomics ssGSEA and Differential Enrichment Report"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: 
+  html_document:
+    theme: flatly
+params:
+  linesFromMaxQuant: NA
+  stats_proteinGroups: NA
+  configuration: NA
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Data description and quality control
+
+The MaxQuant algrorithm identified `r params$stats_proteinGroups$NumFullProt` proteins across all samples. 
+`r params$stats_proteinGroups$NumPotCon` potential contaminants, `r params$stats_proteinGroups$IdentifiedBySite` proteinsGroups only identified by site, and `r params$stats_proteinGroups$Reverse` proteins only identified in the reverse database were removed from the data set. The final dataset has `r params$stats_proteinGroups$Cleaned` rows. `r params$stats_proteinGroups$IntensityMetric` was used as intensity metric for single sample Gene Set Enrichment Analysis (ssGSEA) enrichment score calculation.
+Missing values are imputed using the `r params$stats_proteinGroups$Imputation` method. Imputation is based on knn (k-nearest-neighbour) from the impute package [1], MinDet or QRLIC from the imputeLCMD package with default parameters [2] or a custom implementation of Perseus' sampling from a down-shifted Gaussian distribution (replaceMissingFromGaussian(), implemented by Matthias Ziehm) with default parameters of width = 0.3 and shift = 1.8.
+
+## 2. single samples Gene Set Enrichment Analysis (ssGSEA)
+
+The calculation of ssGSEA (single-sample Gene Set Enrichment Analysis) scores is mainly a prerequisite to perform differential enrichment in step 4 and is adapted from Krug et al. [1] (https://github.com/broadinstitute/ssGSEA2.0). 
+
+Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. 
+Advantages of this approach include the flexible in- and exlcusion of samples without recalculation of differentially expressed proteins and presumably the possibility of reducing batch effects.
+
+### 2.1 Configuration
+
+Configuration of the ssGSEA algorithm implements the default parameters as stated at . 
+The exponential weight employed in calculation of enrichment scores was set to `r params$configuration$weight`. Number of permutations were set to `r params$configuration$nperm`. The correlation type was set to `r params$configuration$correl.type`.
+Gene sets whose overlap with the genes listed in the input GCT file are less than `r params$configuration$min.overlap` are excluded. 
+
+### 2.2 Summary of ssGSEA results
+
+
+## 3. Experimental setup of differential enrichment analysis
+
+## 4. Results of differential enrichment analysis
+
+```{r Experimental Setup, echo=F}
+params$ExpSetup
+```
+
+### 4.1 Volcano plot
+Differential enrichment volcano plot, x axis denoting the fold change and y axis the -log10 of P.value from the limma [`toptable` function](https://www.rdocumentation.org/packages/limma/versions/3.28.14/topics/toptable). P-values are multiple testing corrected by using the [Benjamini-Hochberg procedure](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust). 
+
+
+
+```{r Limma Output, echo=F}
+
+if(is.null(params$volcano_plot)){
+  message("The volcano plot was not computed during the analysis and thus is not part of this report.\n")
+} else {
+  params$volcano_plot
+}
+```
+
+### 4.2 Boxplots of selected enrichment scores
+
+User selected pathways/gene sets showing higher enrichment scores.   
+
+```{r Limma BoxplotUp, echo=F}
+
+if(is.null(params$boxPlotUp)){
+  message("The boxplot for enriched pathways (higher) was not computed during the analysis and thus is not part of this report.\n")
+} else {
+  params$boxPlotUp
+}
+```
+
+User selected pathways/gene sets showing lower enrichment scores.   
+
+```{r Limma BoxplotDown, echo=F}
+
+if(is.null(params$boxPlotDown)){
+  message("The boxplot for enriched pathways (lower) was not computed during the analysis and thus is not part of this report.\n")
+} else {
+  params$boxPlotDown
+}
+```
+
+### 4.3 Table of pathways or gene sets with significant changes in enrichment
+
+To see the full list of terms, jump to [appendix enrichments table (up)](#appendix-Up) and [appendix enrichments table (down)](#appendix-Down), respectively.
+
+## References
+
+[1]  Trevor Hastie, Robert Tibshirani, Balasubramanian Narasimhan and Gilbert Chu (2018). impute: impute: Imputation for
+  microarray data. R package version 1.56.0.
+  
+[2] Cosmin Lazar (2015). imputeLCMD: A collection of methods for left-censored missing data imputation. R package version 2.0.
+  https://CRAN.R-project.org/package=imputeLCMD
+
+## Appendix 
+
+### Enriched pathways or gene sets (higher) {#appendix-Up}
+
+```{r Upregul, echo=F }
+library("kableExtra")
+kable(params$UpRegul, caption = " ") %>% kable_styling(bootstrap_options = c("striped", "hover", "condensed")) 
+```
+
+###  Enriched pathways or gene sets (lower) {#appendix-Down}
+
+```{r DoRegul, echo=F }
+library("kableExtra")
+kable(params$DoRegul) %>% kable_styling(bootstrap_options = c("striped", "hover", "condensed")) 
+```
+
+
+
