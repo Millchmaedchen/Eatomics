@@ -51,12 +51,11 @@ expDesignModule_UI <- function(id) {
                plotOutput(ns("boxPlotUp")),
                plotOutput(ns("boxPlotDown")),
                htmlOutput(ns("doc1"))
-        )
-        ),
+        )),
       
-      #br(),
-      #downloadButton("report", "Generate report"),
-      #downloadButton("reportDataDL", "Download report data"),
+      br(),
+      downloadButton(ns("report"), "Generate report"),
+      downloadButton(ns("reportDataDL"), "Download report data"),
       br()
     )
   )
@@ -80,7 +79,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   
   observe({
     ssgsea_data_update
-    
+    browser()
     validate(need(!is.null(gs_file_list()), "Please perform ssGSEA on the previous tab first."))
     output$diff.gs.collection <- renderUI({
       selectInput(
@@ -736,11 +735,13 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       x = list("Upregulated.Proteins" = limmaResult$df_up, 
                "Downregulated.Proteins" = limmaResult$df_down,
                "Limma.ExpDesign" = ClinDomit$designMatrix %>% rownames_to_column("PatientID"),
-               "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2]))),
-               "Upregulated.GeneSets" = gsea_regul$df_up,
-               "Downregulated.GeneSets" = gsea_regul$df_down,
-               "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
-               "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap)
+               "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2])))
+               #,
+              # "Upregulated.GeneSets" = gsea_regul$df_up,
+              # "Downregulated.GeneSets" = gsea_regul$df_down,
+              # "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
+              # "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap
+               )
       openxlsx::write.xlsx(x, file, row.names = FALSE)
       dev.off()
     }
@@ -754,7 +755,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       # case we don't have write permissions to the current working dir (which
       # can happen when deployed).
       tempReport <- file.path(tempdir(), "ssGSEA_Report.Rmd")
-      file.copy("report.Rmd", tempReport, overwrite = TRUE)
+      file.copy("ssGSEA_Report.Rmd", tempReport, overwrite = TRUE)
       
       # Set up parameters to pass to Rmd document
       params <- list(
