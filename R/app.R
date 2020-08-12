@@ -142,7 +142,8 @@ ui <- shiny::fluidPage(
                                                        shiny::downloadButton('downloadCumSumPlot', 'Save')
                                               )
                         ),
-                        br()
+                        br(),
+                        shiny::uiOutput("Load_info")
                         )
                       ),            
                       hr(),
@@ -378,6 +379,19 @@ server <- function(input, output, session) {
     reportBlocks$linesFromMaxQuant = nrow(data)
       shiny::isolate(selectProteinData(data, intensityMetric = input$insty))
     
+  })
+  
+  output$Load_info = shiny::renderUI({
+    input$analyze
+    validate(need(reportBlocks$stats_proteinGroups, FALSE))
+    shinyBS::bsCollapsePanel(p("Detailed description",style = "color:#18bc9c"),
+                             shiny::HTML(markdown::markdownToHTML(fragment.only=TRUE, text = paste(
+                               "Loaded ", reportBlocks$stats_proteinGroups$NumFullProt, " rows from the provided proteinGroups-file. ",
+                               reportBlocks$stats_proteinGroups$NumPotCon, " potential contaminants, ", reportBlocks$stats_proteinGroups$IdentifiedBySite,
+                               " proteins only identified by site, and ", reportBlocks$stats_proteinGroups$Reverse, "
+                               proteins only identified in the reverse database were removed from the data set.
+                               The final dataset has ", reportBlocks$stats_proteinGroups$Cleaned, " rows. "
+                             ))))
   })
   
   #Remove user defined columns/samples
