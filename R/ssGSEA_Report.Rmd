@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 The MaxQuant algrorithm identified `r params$stats_proteinGroups$NumFullProt` proteins across all samples. 
 `r params$stats_proteinGroups$NumPotCon` potential contaminants, `r params$stats_proteinGroups$IdentifiedBySite` proteinsGroups only identified by site, and `r params$stats_proteinGroups$Reverse` proteins only identified in the reverse database were removed from the data set. The final dataset has `r params$stats_proteinGroups$Cleaned` rows. `r params$stats_proteinGroups$IntensityMetric` was used as intensity metric for single sample Gene Set Enrichment Analysis (ssGSEA) enrichment score calculation.
-Missing values are imputed using the `r params$stats_proteinGroups$Imputation` method. Imputation is based on knn (k-nearest-neighbour) from the impute package [1], MinDet or QRLIC from the imputeLCMD package with default parameters [2] or a custom implementation of Perseus' sampling from a down-shifted Gaussian distribution (replaceMissingFromGaussian(), implemented by Matthias Ziehm) with default parameters of width = 0.3 and shift = 1.8.
+Missing values are imputed using the `r params$stats_proteinGroups$Imputation` method. The imputation methods are based on knn (k-nearest-neighbour) from the impute package [1], MinDet or QRLIC from the imputeLCMD package with default parameters [2] or a custom implementation of Perseus' sampling from a down-shifted Gaussian distribution (replaceMissingFromGaussian(), implemented by Matthias Ziehm) with default parameters of width = 0.3 and shift = 1.8.
 
 ## 2. Single samples Gene Set Enrichment Analysis (ssGSEA)
 
