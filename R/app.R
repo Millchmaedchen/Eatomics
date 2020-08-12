@@ -1401,9 +1401,6 @@ server <- function(input, output, session) {
                "Downregulated.Proteins" = limmaResult$df_down,
                "Limma.ExpDesign" = ClinDomit$designMatrix %>% tibble::rownames_to_column("PatientID"),
                "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2]))),
-               "Upregulated.GeneSets" = gsea_regul$df_up,
-               "Downregulated.GeneSets" = gsea_regul$df_down,
-               "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
                "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap)
       openxlsx::write.xlsx(x, file, row.names = FALSE)
       grDevices::dev.off()
@@ -1473,12 +1470,7 @@ server <- function(input, output, session) {
               boxPlotDown = reportBlocks$boxPlotDown,
               ExpSetup = reportBlocks$ExpSetup,
               UpRegul = limmaResult$df_up,
-              DoRegul = limmaResult$df_down,
-              gsea_volcano_plot=reportBlocks$gsea_volcano_plot,
-              gseaSetup = reportBlocks$gseaSetup,
-              gseaUpRegul = gsea_regul$up,
-              gseaDoRegul = gsea_regul$down,
-              separateValuesGSEA = reportBlocks$separateValuesGSEA
+              DoRegul = limmaResult$df_down
               )
       
       # Knit the document, passing in the `params` list, and eval it in a

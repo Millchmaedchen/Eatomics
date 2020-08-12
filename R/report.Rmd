@@ -194,14 +194,14 @@ params$ExpSetup
 
 ## Appendix 
 
-### Upregulated Genelist {#appendix-Up}
+### List of proteins with higher abundance {#appendix-Up}
 
 ```{r Upregul, echo=F }
 library("kableExtra")
 kable(params$UpRegul, caption = " ") %>% kable_styling(bootstrap_options = c("striped", "hover", "condensed")) 
 ```
 
-### Downregulated Genelist{#appendix-Down}
+### List of proteins with less abundance {#appendix-Down}
 
 ```{r DoRegul, echo=F }
 library("kableExtra")
