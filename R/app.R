@@ -1161,8 +1161,8 @@ server <- function(input, output, session) {
       tibble::rownames_to_column("Gene names") %>% 
       dplyr::left_join(., reportBlocks$ProteinIDMap, by = ("Gene.name" = "Gene names"))
     
-    
-    reportBlocks$volcano_plot<-limma_input()
+    temp_volcano = limma_input()
+    #reportBlocks$volcano_plot <- limma_input()
     
     #Prepare interactive plot, reactive title and legend
    
@@ -1182,9 +1182,13 @@ server <- function(input, output, session) {
                                            Filnames, collapse = "")
     } else {
       title_begin =  paste("Proteins abundance with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
-    })
+    }
+    )
+    browser()
+    reportBlocks$volcano_plot = temp_volcano + ggtitle(title_begin)
+    browser()
 
-    pp <- plotly::ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
+    pp <- plotly::ggplotly(temp_volcano, tooltip = "text") %>% 
       plotly::layout(title = paste0('Volcano plot',
                                       '<br>',
                                       '<sup>',
@@ -1201,8 +1205,7 @@ server <- function(input, output, session) {
                                                # bgcolor = "blue"
                                 )
                      )
-      
-
+    browser()
     pp
   })
   
