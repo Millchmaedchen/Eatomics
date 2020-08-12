@@ -1148,13 +1148,18 @@ server <- function(input, output, session) {
     
     limmaResult$upregulated = as.factor(gene_list$logFC >= input$logFC & gene_list$adj.P.Val <= input$adj.P.Val)
     limmaResult$up <- na.omit(gene_list[limmaResult$upregulated=="TRUE",])
-    limmaResult$df_up <- limmaResult$up %>% tibble::rownames_to_column("Gene.name")
+    limmaResult$df_up <- limmaResult$up %>% 
+      tibble::rownames_to_column("Gene names") %>% 
+      dplyr::left_join(., reportBlocks$ProteinIDMap, by = ("Gene.name" = "Gene names"))
+
     
     ##select down regulated dataframe
     
     limmaResult$downregulated= as.factor(gene_list$logFC <= (-input$logFC) & gene_list$adj.P.Val <= input$adj.P.Val)
     limmaResult$down <- na.omit(gene_list[ limmaResult$downregulated =="TRUE",])
-    limmaResult$df_down<-limmaResult$down %>% tibble::rownames_to_column("Gene.name")
+    limmaResult$df_down<-limmaResult$down %>% 
+      tibble::rownames_to_column("Gene names") %>% 
+      dplyr::left_join(., reportBlocks$ProteinIDMap, by = ("Gene.name" = "Gene names"))
     
     
     reportBlocks$volcano_plot<-limma_input()
@@ -1263,8 +1268,8 @@ server <- function(input, output, session) {
                       #"less.than.or.equal.to_61"
                       GR_fatcor, 
                       #!! parse_expr(GR_fatcor), 
-                      limmaResult[s_up,]$Gene.name)) %>% 
-      tidyr::gather(key = "Gene name", value = "log2 of LFQ value", c(limmaResult[s_up,]$Gene.name))
+                      limmaResult[s_up,]$`Gene names`)) %>% 
+      tidyr::gather(key = "Gene name", value = "log2 of LFQ value", c(limmaResult[s_up,]$`Gene names`))
     if (is.null(labelColBox) | labelColBox == "" | labelColBox =="none") {
       groups = NULL
       labels = PD$PatientID
@@ -1308,8 +1313,8 @@ server <- function(input, output, session) {
     PD = dplyr::left_join(PD, experimentalDesign) %>% 
       dplyr::select(c("PatientID", 
                       GR_fatcor, 
-                      limmaResult[s_up,]$Gene.name)) %>% 
-      tidyr::gather(key = "Gene name", value = "log2 of LFQ value", c(limmaResult[s_up,]$Gene.name))# %>% 
+                      limmaResult[s_up,]$`Gene names`)) %>% 
+      tidyr::gather(key = "Gene name", value = "log2 of LFQ value", c(limmaResult[s_up,]$`Gene names`))# %>% 
     PD[,GR_fatcor] = readr::parse_factor(dplyr::pull(PD, GR_fatcor), include_na = FALSE)
     if (is.null(labelColBox) | labelColBox == "" | labelColBox =="none") {
       groups = NULL
@@ -1347,25 +1352,32 @@ server <- function(input, output, session) {
   }
   
   output$up <- DT::renderDataTable({
-    df<-limmaResult$df_up
-    DT::datatable(df[, c("Gene.name","logFC","P.Value","adj.P.Val")],
+    df <- limmaResult$df_up
+    shiny::validate(need(limmaResult$df_up, message = "Please configure an experiment first."))
+    DT::datatable(df[, c("Gene names", "logFC","P.Value","adj.P.Val", "Majority protein IDs")],
                   rownames = FALSE,
-                  class = 'cell-border stripe',width= '150px',extensions ='Scroller', 
+                  class = 'cell-border stripe',
+                  width= '150px',
+                  extensions ='Scroller', 
                   options = list(
                     deferRender = TRUE,
                     scrollY = 100,
                     scroller = TRUE,
-                    scrollCollapse=TRUE,
-                    pageLength = 100, lengthMenu = c(5,10,50,100,200)
-                  )
-    )
+                    scrollCollapse = TRUE,
+                    pageLength = 100, 
+                    lengthMenu = c(5,10,50,100,200)
+                  )) %>% 
+      DT::formatRound(columns = 2, digits = 2) %>% 
+      DT::formatRound(columns = c(3:4), digits = 5)
     
   })
   
   output$down <- DT::renderDataTable({
     
     df<-limmaResult$df_down
-    DT::datatable(df[, c("Gene.name","logFC","P.Value","adj.P.Val")],rownames = FALSE,
+    shiny::validate(need(limmaResult$df_down, message = "Please configure an experiment first."))
+    DT::datatable(df[, c("Gene names", "logFC", "adj.P.Val", "P.Value", "Majority protein IDs")],
+                  rownames = FALSE,
                   class = 'cell-border stripe', 
                   extensions ='Scroller',
                   options = list(
@@ -1373,9 +1385,12 @@ server <- function(input, output, session) {
                     scrollY = 100,
                     scroller = TRUE,
                     scrollCollapse=TRUE,
-                    pageLength = 100, lengthMenu = c(5, 10, 50, 100, 200)
-                  )
-    )
+                    pageLength = 100, 
+                    lengthMenu = c(5, 10, 50, 100, 200)
+                  )) %>% 
+                    DT::formatRound(columns = 2, digits = 2) %>% 
+                    DT::formatRound(columns = c(3:4), digits = 5)
+
   })
   
   output$reportDataDL <- shiny::downloadHandler(
