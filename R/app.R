@@ -28,6 +28,9 @@ source(paste(homeDir, '/expDesignModule.R', sep = ""))
 # Load download module
 source(paste(homeDir, '/plot_download_module.R', sep = ""))
 
+# Load plot color module
+source(paste(homeDir, '/configurePlotCol_module.R', sep = ""))
+
 # Load available gene sets from Data 
 gene.set.databases = list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt", full.names = TRUE)
 names(gene.set.databases) <- list.files(path = paste(homeDir, "/../Data/GeneSetDBs/", sep = ""), pattern = ".gmt")
@@ -115,19 +118,27 @@ ui <- shiny::fluidPage(
                                                        shiny::uiOutput("labelCol"),
                                                        shiny::checkboxInput("imputeforPCA", "Use imputed data for PCA", TRUE),
                                                        shiny::plotOutput("pca_input_samples", height = 800),
+                                                      br(),
                                                        shiny::downloadButton('downloadpca', 'Save'), 
+                                                      br(),
                                                        downloadObjUI(id = "pca")  
                                               ),
 
                                              shiny::tabPanel(title = "Distribution overview",
-                                                             shiny::uiOutput("labelCol_d"),
+                                                             configurePlotColUI(id = "distr"),
                                                              shiny::plotOutput("distributionPlot",height = 800) ,
-                                                             shiny::downloadButton('downloadDistributionPlot', 'Save')
+                                                             br(),
+                                                             shiny::downloadButton('downloadDistributionPlot', 'Save'),
+                                                             br(),
+                                                             downloadObjUI(id = "distr")  
                                              ),
                                               shiny::tabPanel(title = "Protein coverage",
+                                                              configurePlotColUI(id = "coverage"),
                                                        shiny::plotOutput("numbers", height = 800),
                                                        br(),
-                                                       shiny::downloadButton('downloadNumbers', 'Save')
+                                                       shiny::downloadButton('downloadNumbers', 'Save'),
+                                                       br(),
+                                                       downloadObjUI(id = "coverage")  
                                               ),
                                               shiny::tabPanel(title = "Sample to sample heatmap",
                                                        shiny::selectizeInput(inputId = "distanceMetric",
@@ -135,11 +146,19 @@ ui <- shiny::fluidPage(
                                                                       choices = list("Pearson" = "Pearson", "Euclidean" = "Euclidean")
                                                        ),
                                                        shiny::plotOutput("StS_heatmap", height = 600),
-                                                       shiny::downloadButton('downloadStS_heatmap', 'Save')
+                                                       br(),
+                                                       shiny::downloadButton('downloadStS_heatmap', 'Save'),
+                                                       br(),
+                                                       downloadObjUI(id = "sts_hm")  
                                               ),
                                               shiny::tabPanel(title = "Cumulative protein intensities",
                                                        shiny::plotOutput("CumSumPlot", height = 600),
-                                                       shiny::downloadButton('downloadCumSumPlot', 'Save')
+                                                       br(),
+                                                       DT::dataTableOutput('cumsum_table'),
+                                                       br(),
+                                                       shiny::downloadButton('downloadCumSumPlot', 'Save'), 
+                                                       br(),
+                                                       downloadObjUI(id = "cumsum_int")  
                                               )
                         ),
                         br(),
@@ -454,11 +473,11 @@ server <- function(input, output, session) {
     input$unique, 
     input$filterTH,
     input$filt,
-    normalizeVsn,
-    log2tansform), ignoreNULL = TRUE,  ignoreInit = TRUE, 
+    normalizeVsn(),
+    log2tansform()), ignoreNULL = TRUE,  ignoreInit = TRUE, 
     {
       shiny::req(protfile$protfile$name)
-      
+      browser()
       filt<-filtpro()
       if (shiny::isolate(input$unique == "chck_iso" )) {
         data_unique <- checkForDuplicates(filt)
@@ -606,40 +625,28 @@ server <- function(input, output, session) {
 
     #Distribution plot
     
-    output$labelCol_d<- shiny::renderUI({
-      shiny::conditionalPanel(condition = need(ClinData(), FALSE) , 
-                              shiny::selectInput(
-                                inputId = "labelCol_d", 
-                                label = strong("Choose the clinical parameter for group colours"),
-                                choices = as.list("none" = "none", colnames(ClinData())),
-                                multiple = FALSE,
-                                selectize = TRUE
-                              )
-      )
-    })
-    
-    
-    distributionPlot_input <- shiny::reactive({
-      if (is.null(input$labelCol_d) | input$labelCol_d == "" | input$labelCol_d == "none" ) {
-        dummy = NULL
-      } else if (!is.null(input$labelCol) && input$labelCol != "PatientID") {
-        dummy = dplyr::select(ClinData(), PatientID, groups = input$labelCol_d)
-      }  else {
-        message("Please select a different parameter for colouring")
-        dummy = dplyr::select(ClinData(), PatientID) %>% bind_cols(groups = rep("constant", length(.)))
-      }
-      original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
-      plot_distribution(original, dummy)
-    })
+    labelCol = callModule(configurePlotCol, id = "distr", ClinData = ClinData())
     
     output$distributionPlot <- shiny::renderPlot({
-      QCreport$distributionPlot <- distributionPlot_input()
-      distributionPlot_input()
+      log2tansform(TRUE)
+      ClinData = ClinData()
+      dummy = tibble()
+        if (!is.null(labelCol()) && labelCol() != "PatientID") {
+        dummy = dplyr::select(ClinData, PatientID, groups = labelCol())
+      }  else {
+       # message("Please select a different parameter for colouring")
+        dummy = dplyr::select(ClinData, PatientID) %>% bind_cols(groups = rep("constant", nrow(.)))
+      }
+      original = proteinAbundance$original %>% as_tibble() #%>% tibble::column_to_rownames("Gene names") #%>% as.data.frame()
+      QCreport$distributionPlot = plot_distribution(original, dummy)
+      QCreport$distributionPlot
     })
     
     output$downloadDistributionPlot <- shiny::downloadHandler(
       filename = "DistributionPlot.pdf",
       content = function(file) {
+        plot_parameters = callModule(downloadObj, id = "distr", title = "Distribution of proetin intensities", filename = "DistributionPlot.pdf")
+        QCreport$distributionPlot = add_plot_info(QCreport$distributionPlot, plot_parameters)
         grDevices::pdf(file)
         print(QCreport$distributionPlot)
         grDevices::dev.off()
@@ -647,19 +654,30 @@ server <- function(input, output, session) {
 
     
     #Protein coverage plot
-    numbers_input <- reactive({
-      original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
-      plot_proteinCoverage(original)
+    labelCol_cov = callModule(configurePlotCol, id = "coverage", ClinData = ClinData())
+    
+    output$numbers <- renderPlot({      
+      original = proteinAbundance$original %>% as_tibble()# column_to_rownames("Gene names") %>% as.data.frame()
+      ClinData = ClinData()
+      dummy = tibble()
+      
+      if (!is.null(labelCol_cov()) && labelCol_cov() != "PatientID") {
+        dummy = dplyr::select(ClinData, PatientID, groups = labelCol_cov())
+      }  else {
+        dummy = dplyr::select(ClinData, PatientID) %>% bind_cols(groups = rep("constant", nrow(.)))
+      }
+      
+      QCreport$number <- plot_proteinCoverage(original, dummy)
+      QCreport$number
     })
-    output$numbers <- renderPlot({
-      QCreport$number <- numbers_input()
-      numbers_input()
-    })
+    
     output$downloadNumbers <- downloadHandler(
       filename = "ProteinNumbers.pdf",
       content = function(file) {
+        plot_parameters = callModule(downloadObj, id = "coverage", title = "Measured proteins per sample", filename = "ProteinNumbers.pdf")
+        QCreport$number = add_plot_info(QCreport$number, plot_parameters)
         grDevices::pdf(file)
-        print(numbers_input())
+        print(QCreport$number)
         grDevices::dev.off()
       })
 
@@ -682,6 +700,8 @@ server <- function(input, output, session) {
     output$downloadStS_heatmap <- shiny::downloadHandler(
       filename = "StS_heatmap.pdf",
       content = function(file) {
+        plot_parameters = callModule(downloadObj, id = "sts_hm", title = "Sample to sample heatmap", filename = "StS_heatmap.pdf")
+        QCreport$StSheatmap = add_plot_info(QCreport$StSheatmap, plot_parameters)
         grDevices::pdf(file)
         print(QCreport$StSheatmap)
         print(QCreport$StSDistMetric)
@@ -690,19 +710,45 @@ server <- function(input, output, session) {
     
     
     # Cumulative Intensities 
-    CumSumPlot_input <- shiny::reactive({
+    output$CumSumPlot <- shiny::renderPlot({
+      input$analyze
       log2tansform(FALSE)
       original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
-      plot_CumSumIntensities(original)
+      QCreport$cumsum = CumSumIntensities(original)[1]
+      QCreport$cumsum_table = CumSumIntensities(original)[[2]]
+
+     # grid::grid.draw(CumSumPlot_input())
+      QCreport$cumsum
     })
-    output$CumSumPlot <- shiny::renderPlot({
-      QCreport$cumsum<-CumSumPlot_input()
-      grid::grid.draw(CumSumPlot_input())
-      
+    
+    output$cumsum_table <- DT::renderDataTable({
+      input$analyze
+      browser()
+      original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
+        df <- CumSumIntensities(original)[[2]]
+
+       df = DT::datatable(df,
+                      rownames = TRUE,
+                      class = 'cell-border stripe',
+                      width= '150px',
+                      extensions ='Scroller', 
+                      options = list(
+                        deferRender = TRUE,
+                        scrollY = 100,
+                        scroller = TRUE,
+                        scrollCollapse = TRUE,
+                        pageLength = 100, 
+                        lengthMenu = c(5,10,50,100,200)
+                      )) 
+
     })
+    
     output$downloadCumSumPlot <- downloadHandler(
       filename = "CumSumPlot.pdf",
       content = function(file) {
+        plot_parameters = callModule(downloadObj, id = "cumsum_int", title = "Cumulative protein intensities", filename = "CumSumPlot.pdf")
+        original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
+        QCreport$cumsum = add_plot_info(CumSumIntensities(original)[[1]], plot_parameters)
         grDevices::pdf(file)
         grid::grid.draw(QCreport$cumsum)
         grDevices::dev.off()
@@ -1428,9 +1474,7 @@ server <- function(input, output, session) {
   output$doc1 <- shiny::renderUI({
     req(ClinDomit$designMatrix, limmaResult$gene_list)
     
-    kable_input<-knitr::kable(ClinDomit$designMatrix)%>%  kableExtra::kable_styling(bootstrap_options = "striped") 
-    
-    #kable_input<-kable(CD)%>%kable_styling() 
+    kable_input<-knitr::kable(ClinDomit$designMatrix) %>% kableExtra::kable_styling(bootstrap_options = "striped") 
     
     reportBlocks$ExpSetup <- 
       shiny::HTML(markdown::markdownToHTML(fragment.only=TRUE, text=c( 

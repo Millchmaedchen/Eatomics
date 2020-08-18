@@ -20,7 +20,7 @@ expDesignModule_UI <- function(id) {
                        uiOutput(ns("filter_level_gsea" ))),
       shiny::conditionalPanel("input.expandFilter_gsea == true", ns = ns,
                        uiOutput(ns("selectContrast_gsea"))),
-      shiny::actionButton(ns("analyze_diff_gsea"),"Analyze",class = "btn-primary"),
+      shiny::actionButton(ns("analyze_diff_gsea"), "Analyze", class = "btn-primary"),
       shiny::textOutput(ns('analyzeAlerts'))
      ), 
     mainPanel(
