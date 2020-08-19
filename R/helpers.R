@@ -153,10 +153,9 @@ matchedExpDesign <- function(expDesign, proteinAbundance){
 #' @export
 
 plot_distribution <- function (proteinAbundance, dummy = NULL) {
-  proteinAbundance <- proteinAbundance %>% gather(key = "PatientID", value = "Abundance")
-  browser()
+  proteinAbundance <- proteinAbundance %>% tidyr::gather(key = "PatientID", value = "Abundance", -`Gene names`)
   if(!is.null(dummy)) {
-    proteinAbundance = left_join(proteinAbundance, dummy, by = c("PatientID" = "PatientID"))
+    proteinAbundance = dplyr::left_join(proteinAbundance, dummy, by = c("PatientID" = "PatientID"))
   }
   tmp_plot = ggplot(proteinAbundance, aes(x = PatientID, y = Abundance, fill = groups)) + 
     geom_boxplot(notch = TRUE, na.rm = TRUE) +
@@ -166,9 +165,9 @@ plot_distribution <- function (proteinAbundance, dummy = NULL) {
     theme_light() 
   
   if (is.numeric(dummy$groups)){
-    tmp_plot  = tmp_plot + ggthemes::scale_color_continuous_tableau("Red-Gold",na.value = "grey30") 
+    tmp_plot  = tmp_plot + ggthemes::scale_fill_continuous_tableau("Red-Gold", na.value = "grey30") 
   } else {
-    tmp_plot  = tmp_plot + ggthemes::scale_color_tableau()
+    tmp_plot  = tmp_plot + ggthemes::scale_fill_tableau()
   }
   tmp_plot
 }
@@ -180,15 +179,26 @@ plot_distribution <- function (proteinAbundance, dummy = NULL) {
 #' @return
 #' @export
 
-plot_proteinCoverage <- function (proteinAbundance) {
-  proteinAbundance <- proteinAbundance %>% gather(key = "SampleID", value = "Number of proteins") %>% group_by(SampleID) %>% summarise_all(list(~sum(!is.na(.))))
-  ggplot(proteinAbundance, aes(x= SampleID, y= `Number of proteins`)) +
+plot_proteinCoverage <- function (proteinAbundance, dummy = NULL) {
+  proteinAbundance <- proteinAbundance %>% 
+    gather(key = "PatientID", value = "Number of proteins", -`Gene names`) %>% 
+    group_by(PatientID) %>% 
+    summarise_all(list(~sum(!is.na(.)))) %>% 
+    dplyr::left_join(., dummy, by = c("PatientID" = "PatientID"))
+  
+  tmp_plot = ggplot(proteinAbundance, aes(x= PatientID, y= `Number of proteins`, fill = groups)) +
     geom_col() +
     labs(title = "Measured proteins per sample", x = "", y = "Number of proteins") + 
-    guides(fill=FALSE) +
-    scale_color_tableau() +
+   # guides(fill=FALSE) +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+  
+  if (is.numeric(dummy$groups)){
+    tmp_plot  = tmp_plot + ggthemes::scale_fill_continuous_tableau("Red-Gold", na.value = "grey30") 
+  } else {
+    tmp_plot  = tmp_plot + ggthemes::scale_fill_tableau()
+  }
+  tmp_plot
 }
 
 #' Sample-to-sample heatmap  - Creates a heatmap of sample-to-sample distances based either on correlation coefficient or 
@@ -205,7 +215,7 @@ plot_StS_heatmap <- function(proteinAbundance, corr = FALSE){
   if (corr == TRUE) {
     sampleDists = cor(proteinAbundance, use = "pairwise.complete.obs")
   } else {
-    sampleDists <- dist(t(proteinAbundance), method = "euclidean")
+    sampleDists <- stats::dist(t(proteinAbundance), method = "euclidean")
   }
   sampleDistMatrix <- as.matrix( sampleDists )
   colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
@@ -257,6 +267,36 @@ plot_CumSumIntensities <- function(proteinAbundance, plotText = "all selected sa
   arrangeGrob(g1, g2, ncol = 4, layout_matrix = rbind(c(1,1,1,1,2,2)
                                                       
   ))
+}
+
+
+CumSumIntensities <- function(proteinAbundance, plotText = "all selected samples"){
+  filtered_proteins = proteinAbundance
+  samplenames = colnames(filtered_proteins)
+  GeneSumControl = sort(rowSums(filtered_proteins[,samplenames], na.rm = TRUE), decreasing = TRUE)
+  GeneSumControlPerc = (GeneSumControl/sum(GeneSumControl) )* 100
+  #Create color key for plots
+  blue = length(which(cumsum(GeneSumControlPerc)<=25))
+  green = length(which(cumsum(GeneSumControlPerc)<=50))-blue
+  red =  length(which(cumsum(GeneSumControlPerc)>75))
+  yellow = length(which(cumsum(GeneSumControlPerc)>50))-red
+  colorVector = c(rep("Q1", blue),
+                  rep("Q2", green), 
+                  rep("Q3", yellow),
+                  rep("Q4", red))
+  CumSum = data.frame("value" = cumsum(GeneSumControlPerc), "id"  = c(1:length(cumsum(GeneSumControlPerc))), "col" = colorVector, "name" = names(GeneSumControlPerc))
+  g2 = tableGrob(CumSum[1:20, c("name","value")], rows = c(1:20), cols = c("Gene Name", "Cum. Intensity"), theme = ttheme_default(base_size = 10)) 
+  g1 = ggplot(CumSum, aes(x= CumSum$id, y= CumSum$value, colour=CumSum$col, label=CumSum$name))+
+    geom_point() +
+    ggtitle("Cumulative Protein Intensities") +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+    #geom_text(aes(label=ifelse(CumSum$value<50,as.character(name),'')), show.legend = F, hjust = 0, vjust = 0.5,  nudge_x = 70,size = 4) +
+    geom_text_repel(aes(label=ifelse(CumSum$value<25,as.character(name),'')), show.legend = F, size = 4) +
+    labs(title= , x = paste("Intensity ranked proteins in\n ",plotText), y = "Cumulative protein intesity (%)", col = "Quartiles") +
+    scale_color_tableau() +
+    theme_light()
+ # arrangeGrob(g1, g2, ncol = 4, layout_matrix = rbind(c(1,1,1,1,2,2)))
+  return(list(g1, CumSum))
 }
 
 

@@ -20,7 +20,7 @@ expDesignModule_UI <- function(id) {
                        uiOutput(ns("filter_level_gsea" ))),
       shiny::conditionalPanel("input.expandFilter_gsea == true", ns = ns,
                        uiOutput(ns("selectContrast_gsea"))),
-      shiny::actionButton(ns("analyze_diff_gsea"),"Analyze",class = "btn-primary"),
+      shiny::actionButton(ns("analyze_diff_gsea"), "Analyze", class = "btn-primary"),
       shiny::textOutput(ns('analyzeAlerts'))
      ), 
     mainPanel(
@@ -79,7 +79,6 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   
   observe({
     ssgsea_data_update
-    browser()
     validate(need(!is.null(gs_file_list()), "Please perform ssGSEA on the previous tab first."))
     output$diff.gs.collection <- renderUI({
       selectInput(
@@ -523,8 +522,8 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     input$analyzeLimma 
     isolate(
       if (input$ContinChoice_gsea == FALSE){
-        title_begin = paste(names(ClinDomit$designMatrix)[1], 
-                            " changed when compared to ", 
+        title_begin = paste("Gene sets changed in ", names(ClinDomit$designMatrix)[1], 
+                            " when compared to ", 
                             names(ClinDomit$designMatrix[2]), 
                             Filnames, collapse = "")
       } else {
