@@ -392,7 +392,6 @@ idmaker <- function(x){
 ## add title, subtitle, captions to plots
 
 add_plot_info <- function(ggplot_item, plot_parameters) {
-  browser()
   ggplot_item = ggplot_item + ggplot2::ggtitle(plot_parameters$title)
   if(plot_parameters$subtitle != "") {
     ggplot_item = ggplot_item + ggplot2::labs(subtitle = plot_parameters$subtitle)

@@ -477,7 +477,6 @@ server <- function(input, output, session) {
     log2tansform()), ignoreNULL = TRUE,  ignoreInit = TRUE, 
     {
       shiny::req(protfile$protfile$name)
-      browser()
       filt<-filtpro()
       if (shiny::isolate(input$unique == "chck_iso" )) {
         data_unique <- checkForDuplicates(filt)
@@ -723,7 +722,6 @@ server <- function(input, output, session) {
     
     output$cumsum_table <- DT::renderDataTable({
       input$analyze
-      browser()
       original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
         df <- CumSumIntensities(original)[[2]]
 
@@ -1244,9 +1242,7 @@ server <- function(input, output, session) {
       title_begin =  paste("Proteins abundance with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
     }
     )
-    browser()
     reportBlocks$volcano_plot = temp_volcano + ggtitle(title_begin)
-    browser()
 
     pp <- plotly::ggplotly(temp_volcano, tooltip = "text") %>% 
       plotly::layout(title = paste0('Volcano plot',
@@ -1265,7 +1261,6 @@ server <- function(input, output, session) {
                                                # bgcolor = "blue"
                                 )
                      )
-    browser()
     pp
   })
   
