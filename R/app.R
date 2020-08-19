@@ -7,7 +7,7 @@
 setRepositories(ind = c(1:6, 8))
 
 # Install or load neccessary R packages 
-list_of_packages = c("shiny","shinythemes", 'shinycssloaders', "shinyalert", 'shinyFiles', "shinyWidgets", "shinyBS", "openxlsx", "pheatmap", "RColorBrewer", "plotly", "ggplot2",
+list_of_packages = c("shiny","shinythemes", 'shinycssloaders', "shinyalert", "shinyjs", 'shinyFiles', "shinyWidgets", "shinyBS", "openxlsx", "pheatmap", "RColorBrewer", "plotly", "ggplot2",
                      "gridExtra", "ggthemes", "autoplotly", "kableExtra", "ggrepel", "gtools", "verification", "tidyverse", "broom", "imputeLCMD", "modelr", "limma", "markdown")
 
 lapply(list_of_packages, 
@@ -42,7 +42,7 @@ sessionID = paste(homeDir,"/../Data/EnrichmentScores_User", sep = "")
 
 
 ui <- shiny::fluidPage( 
-
+  useShinyjs(),
   # Application title
   shiny::navbarPage("Eatomics",id="id",
              theme = shinythemes::shinytheme("flatly"),
@@ -103,7 +103,7 @@ ui <- shiny::fluidPage(
                                    
                           ),
                           br(),
-                          shiny::actionButton("analyze","Analyze",class = "btn-primary")),
+                          shinyjs::disabled(shiny::actionButton("analyze","Analyze",class = "btn-primary"))),
                         
                         shiny::mainPanel(
                           shiny::tabsetPanel(id= "QCtab",type = "tabs",
@@ -151,6 +151,13 @@ ui <- shiny::fluidPage(
                                                        br(),
                                                        downloadObjUI(id = "sts_hm")  
                                               ),
+                                             shiny::tabPanel(title = "Missing value densities",
+                                                             shiny::plotOutput("misVal", height = 600),
+                                                             br(),
+                                                             shiny::downloadButton('downloadmisVal', 'Save'),
+                                                             br(),
+                                                             downloadObjUI(id = "misVal")  
+                                             ),
                                               shiny::tabPanel(title = "Cumulative protein intensities",
                                                        shiny::plotOutput("CumSumPlot", height = 600),
                                                        br(),
@@ -707,6 +714,24 @@ server <- function(input, output, session) {
         grDevices::dev.off()
       })
     
+    # Missing values density
+    output$misVal = shiny::renderPlot({
+      log2tansform(TRUE)
+      QCreport$misVal = plot_misValDens(proteinAbundance)
+      QCreport$misVal
+    })
+    
+    output$downloadNumbers <- downloadHandler(
+      filename = "MisValDensity.pdf",
+      content = function(file) {
+        plot_parameters = callModule(downloadObj, id = "misVal", title = "Distribution of Intensity for origanal and missing values", filename = "MisValDensity.pdf")
+        QCreport$number = add_plot_info(QCreport$misVal, plot_parameters)
+        grDevices::pdf(file)
+        print(QCreport$misVal)
+        grDevices::dev.off()
+      })
+    
+    
     
     # Cumulative Intensities 
     output$CumSumPlot <- shiny::renderPlot({
@@ -748,7 +773,8 @@ server <- function(input, output, session) {
         original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
         QCreport$cumsum = add_plot_info(CumSumIntensities(original)[[1]], plot_parameters)
         grDevices::pdf(file)
-        grid::grid.draw(QCreport$cumsum)
+        print(QCreport$cumsum)
+        print(CumSumIntensities(original)[[2]])
         grDevices::dev.off()
       }
     )
@@ -917,9 +943,12 @@ server <- function(input, output, session) {
       clinfile$name <- input$ClinD
     #clinfile$name <-parseFilePaths(volumes2, input$demo_clin_data)
 
-    if (length(clinfile$name$datapath) == "0")
+    if (length(clinfile$name$datapath) == "0"){
+      disable("analyze")
       return(NULL)
-      
+    }
+
+
     ClinData = readr::read_tsv(clinfile$name$datapath, 
     #ClinData = readr::read_tsv(input$demo_clin_data$datapath, 
                         na =c("", "NA", "N/A","0","<Null>"),
@@ -932,6 +961,7 @@ server <- function(input, output, session) {
   #     ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
    #  }
     ClinDomit$data = ClinData %>% janitor::clean_names()
+    enable("analyze") 
     ClinData
   })
   
