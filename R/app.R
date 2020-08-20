@@ -1491,7 +1491,8 @@ server <- function(input, output, session) {
                "Downregulated.Proteins" = limmaResult$df_down,
                "Limma.ExpDesign" = ClinDomit$designMatrix %>% tibble::rownames_to_column("PatientID"),
                "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2]))),
-               "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap)
+               "ProteinIDs.Gene.Mapping" = reportBlocks$ProteinIDMap,
+               "Raw.data.incl.imputed.values" = proteinAbundance$imputed)
       openxlsx::write.xlsx(x, file, row.names = FALSE)
       grDevices::dev.off()
     }
