@@ -180,6 +180,7 @@ plot_distribution <- function (proteinAbundance, dummy = NULL) {
 #' @export
 
 plot_proteinCoverage <- function (proteinAbundance, dummy = NULL) {
+  max_cov = nrow(proteinAbundance)
   proteinAbundance <- proteinAbundance %>% 
     gather(key = "PatientID", value = "Number of proteins", -`Gene names`) %>% 
     group_by(PatientID) %>% 
@@ -188,8 +189,9 @@ plot_proteinCoverage <- function (proteinAbundance, dummy = NULL) {
   
   tmp_plot = ggplot(proteinAbundance, aes(x= PatientID, y= `Number of proteins`, fill = groups)) +
     geom_col() +
-    labs(title = "Measured proteins per sample", x = "", y = "Number of proteins") + 
+    labs(title = "Measured proteins per sample", caption = "The maximum coverage is denoted by the horizontal line.", x = "", y = "Number of proteins") + 
    # guides(fill=FALSE) +
+    geom_hline(yintercept = max_cov) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   

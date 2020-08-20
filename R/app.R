@@ -1147,12 +1147,14 @@ server <- function(input, output, session) {
     
     shiny::req(ClinDomit$designMatrix)
     
+   # browser()
     if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
       analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
     }
     shiny::validate(need(sum(ClinDomit$designMatrix[,1])>=3, "Validate statement"))
 
-    expDesignInst = ClinDomit$designMatrix %>% janitor::clean_names() 
+    expDesignInst = ClinDomit$designMatrix %>% janitor::clean_names()
+   # browser()
     if (input$ContinChoice == FALSE){
       if (!is.null(need(sum(ClinDomit$designMatrix[,2])>=3, "TRUE"))) {
         analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
@@ -1264,7 +1266,7 @@ server <- function(input, output, session) {
     input$analyzeLimma 
     shiny::isolate(
     if (input$ContinChoice == FALSE){
-      title_begin = paste("Proteins with a change in abundacne in ", names(ClinDomit$designMatrix)[1], 
+      title_begin = paste("Proteins with a change in abundance in ", names(ClinDomit$designMatrix)[1], 
                                            " when compared to \n", 
                                            names(ClinDomit$designMatrix[2]), 
                                            Filnames, collapse = "")
