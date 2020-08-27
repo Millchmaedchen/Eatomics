@@ -8,7 +8,7 @@ setRepositories(ind = c(1:6, 8))
 
 # Install or load neccessary R packages 
 list_of_packages = c("shiny","shinythemes", 'shinycssloaders', "shinyalert", "shinyjs", 'shinyFiles', "shinyWidgets", "shinyBS", "openxlsx", "pheatmap", "RColorBrewer", "plotly", "ggplot2",
-                     "gridExtra", "ggthemes", "autoplotly", "kableExtra", "ggrepel", "gtools", "verification", "tidyverse", "broom", "imputeLCMD", "modelr", "limma", "markdown")
+                     "gridExtra", "ggthemes", "autoplotly", "kableExtra", "ggrepel", "gtools", "verification", "tidyverse", "broom", "imputeLCMD", "modelr", "limma", "markdown", "processx", "pkgload")
 
 lapply(list_of_packages, 
        function(x) if(!require(x,character.only = TRUE)) install.packages(x, dependencies = TRUE))
@@ -948,7 +948,6 @@ server <- function(input, output, session) {
       return(NULL)
     }
 
-
     ClinData = readr::read_tsv(clinfile$name$datapath, 
     #ClinData = readr::read_tsv(input$demo_clin_data$datapath, 
                         na =c("", "NA", "N/A","0","<Null>"),
@@ -986,7 +985,9 @@ server <- function(input, output, session) {
                  input$filter_num.cutoff
                  )
                , {
-                 
+                 limmaResult$gene_list = NULL #refresh volcano plot 
+                 ClinDomit$filterParameter = NULL
+                 ClinDomit$mainParameter = NULL
       ClinDomit$mainParameter = janitor::make_clean_names(input$GR_fatcor)
 
       ## categorize numeric data - first parameter
@@ -1065,6 +1066,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$analyzeLimma ,{
     limmaResult$gene_list = NULL #refresh volcano plot
+    reportBlocks$volcano_plot = NULL 
     
    if (!is.null(need(proteinAbundance$original, "TRUE"))) { # check if protein abundance is loaded
       analyzeAlerts$somelist = c(TRUE, "Please upload a proteinGroups file first (previous tab).")  
@@ -1149,6 +1151,7 @@ server <- function(input, output, session) {
     
    # browser()
     if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
+      browser()
       analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
     }
     shiny::validate(need(sum(ClinDomit$designMatrix[,1])>=3, "Validate statement"))
@@ -1157,6 +1160,7 @@ server <- function(input, output, session) {
    # browser()
     if (input$ContinChoice == FALSE){
       if (!is.null(need(sum(ClinDomit$designMatrix[,2])>=3, "TRUE"))) {
+        browser()
         analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
       }
       shiny::validate(need(sum(ClinDomit$designMatrix[,2])>=3, "Validate statement"))
@@ -1184,7 +1188,12 @@ server <- function(input, output, session) {
     } else {
       validProteins =  proteinAbundance$original[, rownames(expDesignInst)]
       validProteinsLog = (rowSums(!is.na(validProteins)) >= 5)
-      proteinAbundanceLimma <- proteinAbundance$imputed[as.vector(validProteinsLog > 0), c("Gene names", rownames(expDesignInst))]
+      if (input$imputeForLimma == TRUE){
+        proteinAbundanceLimma <- proteinAbundance$imputed[as.vector(validProteinsLog > 0), c("Gene names", rownames(expDesignInst))] %>% tibble::as_tibble()
+      } else {
+        proteinAbundanceLimma <- proteinAbundance$original[as.vector(validProteinsLog > 0),c("Gene names", rownames(expDesignInst))] %>% tibble::as_tibble()
+      }
+     # proteinAbundanceLimma <- proteinAbundance$imputed[as.vector(validProteinsLog > 0), c("Gene names", rownames(expDesignInst))]
       proteinAbundanceLimma <- proteinAbundanceLimma %>% tibble::column_to_rownames("Gene names")
       proteinAbundanceLimma <- proteinAbundanceLimma[which(apply(proteinAbundanceLimma, 1, var, na.rm = TRUE) != 0), ]
       
@@ -1201,7 +1210,7 @@ server <- function(input, output, session) {
   
   #limma_input <- reactive({
   limma_input <- shiny::eventReactive(c(
-    #ClinDomit$designMatrix,
+    limmaResult$gene_list,
     input$analyzeLimma ,
     input$adj.P.Val,
     input$logFC
@@ -1322,7 +1331,7 @@ server <- function(input, output, session) {
   })
   
   output$boxPlotDown <- renderPlot({
-    validate(need(input$down_rows_selected, FALSE))
+    shiny::validate(need(input$down_rows_selected, FALSE))
     original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
     if(ClinColClasses()[input$GR_fatcor]=='factor' | input$ContinChoice == FALSE) {
       experimentalDesign =  ClinDomit$designMatrix[,1:2] %>% tibble::rownames_to_column(var = "PatientID") %>% tidyr::gather(key= group, value = value, -PatientID ) %>% dplyr::filter(value > 0) %>% dplyr::select(-value) #%>% left_join(., ClinData()[, c("PatientID", input$filter_GR_fatcor, input$labelColBox)])

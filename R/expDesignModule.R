@@ -225,12 +225,19 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     })
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
   
-  observe({
-    ClinColClasses()[input$GR_fatcor_gsea] != "numeric"
-    updateCheckboxInput(session, "ContinChoice_gsea", value = FALSE)
-  })
-  observe({
-    req(input$GR_fatcor_gsea)
+shiny::observe({
+    shiny::req(input$GR_fatcor_gsea)
+    shiny::req(input$ContinChoice_gsea)
+    input$GR_fatcor_gsea
+    if(ClinColClasses()[input$GR_fatcor_gsea] != "numeric"){
+      shiny::showNotification("Please make sure that you have selected a continuous variable.")
+      updateCheckboxInput(session, "ContinChoice_gsea", value = FALSE)
+    }
+})
+
+shiny::observe({
+    shiny::req(input$GR_fatcor_gsea)
+    shiny::req(input$ContinChoice_gsea)
     input$GR_fatcor_gsea
     updateCheckboxInput(session, "expandFilter_gsea", value = FALSE)
   })
@@ -251,18 +258,20 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   )
   , {
     limmaResult$gene_list = NULL #refresh volcano plot
+    ClinDomit$filterParameter = NULL
+    ClinDomit$mainParameter = NULL
     ClinDomit$mainParameter = janitor::make_clean_names(input$GR_fatcor_gsea)
     
     ## categorize numeric data - first parameter
     if (input$ContinChoice_gsea == FALSE & ClinColClasses_2()[ClinDomit$mainParameter]=='numeric') {
-      req(input$num.cutoff)
+      shiny::req(input$num.cutoff)
       ClinDomit$data = ClinDomit$data %>% 
-        mutate(categorizedParameter = 
+        dplyr::mutate(categorizedParameter = 
                  cut(dplyr::pull(ClinDomit$data, ClinDomit$mainParameter), 
                      breaks = c(-Inf, input$num.cutoff, Inf), 
                      labels = c(paste('less than or equal to', input$num.cutoff, sep='_'), paste('greater than', input$num.cutoff,sep='_'))
                  ))  %>% 
-        mutate_if(is.character, as.factor)
+        dplyr::mutate_if(is.character, as.factor)
       #%>% 
       #dplyr::select(-c(!!mainParameter)) 
       colnames(ClinDomit$data)[colnames(ClinDomit$data) == "categorizedParameter"] = paste(input$GR_fatcor_gsea, "cat", sep = "_", collapse = "_") %>% janitor::make_clean_names() 
@@ -274,14 +283,14 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       ## categorize second numeric parameter
       ClinDomit$filterParameter =  janitor::make_clean_names(input$filter_GR_fatcor)
       if (ClinColClasses()[input$filter_GR_fatcor]=='numeric') {
-        req(input$filter_num.cutoff)
+        shiny::req(input$filter_num.cutoff)
         ClinDomit$data = ClinDomit$data %>% 
-          mutate(filterParameter = 
+          dplyr::mutate(filterParameter = 
                    cut(dplyr::pull(ClinDomit$data, ClinDomit$filterParameter), 
                        breaks = c(-Inf, input$filter_num.cutoff, Inf), 
                        labels = c(paste('less than or equal to', input$filter_num.cutoff, sep='_'), paste('greater than', input$filter_num.cutoff,sep='_'))
                    )) %>% 
-          mutate_if(is.character, as.factor)
+          dplyr::mutate_if(is.character, as.factor)
 
         # if first parameter stays continuous, the second parameter becomes a filter and needs to be saved for experimental design creation 
         if (ClinColClasses_2()[ClinDomit$mainParameter] =='numeric' & input$ContinChoice_gsea == TRUE){
@@ -292,8 +301,8 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
           # ClinDomit$filterParameter = input$filter_GR_fatcor
         } else {## unite cat first parameter and categorized second parameter, when first is cat or categorized
           ClinDomit$data = ClinDomit$data %>% 
-            unite("newFactor", ClinDomit$mainParameter, filterParameter, remove = FALSE) %>% 
-            mutate_if(is.character, as.factor)
+            tidyr::unite("newFactor", ClinDomit$mainParameter, filterParameter, remove = FALSE) %>% 
+            dplyr::mutate_if(is.character, as.factor)
           colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
           ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
           ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
@@ -306,7 +315,9 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         }else{
           #req(input$filter_levels)
           ## unite cat first and cat second parameter in the case of two cat parameters in the first place
-          ClinDomit$data = ClinDomit$data %>% unite("newFactor", ClinDomit$mainParameter, ClinDomit$filterParameter, remove = FALSE)  %>% mutate_if(is.character, as.factor)
+          ClinDomit$data = ClinDomit$data %>% 
+            tidyr::unite("newFactor", ClinDomit$mainParameter, ClinDomit$filterParameter, remove = FALSE)  %>% 
+            dplyr::mutate_if(is.character, as.factor)
           colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
           ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
           ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
@@ -343,8 +354,8 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
     #    }
     if (input$expandFilter_gsea == TRUE & input$ContinChoice_gsea == FALSE) {
-      req(input$contrastLevels)
-    }
+      shiny::req(input$contrastLevels)
+      }
     if ((!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) & ClinColClasses()[input$GR_fatcor_gsea]!='numeric' & input$expandFilter_gsea == FALSE) {
       analyzeAlerts$somelist = c(TRUE, "Please select two groups to compare.")  
       shiny::validate(need(input$levels, "Validate statement"))
@@ -388,17 +399,17 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         ClinData[,mainParameter] = fct_relevel(dplyr::pull(ClinData, mainParameter), contrastLevels)
       }
       if (length(covariates) == 0){
-        expDesign = model_matrix(ClinData, as.formula(paste("~0", mainParameter, sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~0", mainParameter, sep = "+", collapse = "+")))       
       } else {
-        expDesign = model_matrix(ClinData, as.formula(paste("~0", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~0", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
       }
     }
     # Prep experimental design for first parameter being cont.     
     if (input$ContinChoice_gsea == TRUE){
       if (length(covariates) == 0){
-        expDesign = model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, sep = "+", collapse = "+")))       
       } else {
-        expDesign = model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
       }
     }
     
@@ -409,7 +420,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     
     #observeEvent(input$analyzeLimma ,{
-    req(ClinDomit$designMatrix)
+    shiny::req(ClinDomit$designMatrix)
     if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
       analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
     }
@@ -509,7 +520,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     limmaResult$df_down<-limmaResult$down %>% tibble::rownames_to_column("Gene.name")
     
     
-    reportBlocks$volcano_plot <- limma_input()
+    temp_volcano = limma_input()
     
     #Prepare interactive plot, reactive title and legend
     
@@ -520,7 +531,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
     
     input$analyzeLimma 
-    isolate(
+    shiny::isolate(
       if (input$ContinChoice_gsea == FALSE){
         title_begin = paste("Gene sets changed in ", names(ClinDomit$designMatrix)[1], 
                             " when compared to ", 
@@ -529,6 +540,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       } else {
         title_begin =  paste("Gene sets regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
       })
+    reportBlocks$volcano_plot = temp_volcano + ggtitle(title_begin)
     
     pp <- plotly::ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
       plotly::layout(title = paste0('Volcano plot',
