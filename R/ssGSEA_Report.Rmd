@@ -33,19 +33,50 @@ Advantages of this approach include the flexible in- and exlcusion of samples wi
 
 ### 2.1 Configuration
 
-Configuration of the ssGSEA algorithm implements the default parameters as stated at . 
+Configuration of the ssGSEA algorithm implements the default parameters as stated at https://www.genepattern.org/modules/docs/ssGSEAProjection/4. 
 The exponential weight employed in calculation of enrichment scores was set to `r params$configuration$weight`. Number of permutations were set to `r params$configuration$nperm`. The correlation type was set to `r params$configuration$correl.type`.
 Gene sets whose overlap with the genes listed in the input GCT file are less than `r params$configuration$min.overlap` are excluded. 
+Of the ssGSEA algorithm version v4 is used. Gene set databases are from MSigDB version v6.1.
 
-### 2.2 Summary of ssGSEA results
+### 2.2 Summary of ssGSEA calculation results
 
 
 ## 3. Experimental setup of differential enrichment analysis
 
+The configuration of experimental design resulted in the following design matrix as input for limma:
+```{r Experimental Setup, echo=F}
+if(is.null(params$expDesign)){
+  message("No experiment was set up.\n")
+} else {
+  params$expDesign
+}
+```
+
+Furthermore, limma parametrized with trend correction = TRUE. 
+
+
+* covariates
+* multiple testing correction
+* thresholds of p value and FC
+
 ## 4. Results of differential enrichment analysis
 
-```{r Experimental Setup, echo=F}
-params$ExpSetup
+```{r diff enrichment results, echo=F}
+if(params$ContinChoice_gsea == FALSE | ClinColClasses(params$mainParameter) == "factor") {
+  message("Gene sets called significant are changed in ", contrastGroup1, " when compared to ", contrastGroup2,".")
+} else {
+  message("Gene sets called significant are changed with regard to ", mainParamter, ".")
+  if(params$filter == TRUE){
+    message("Only samples included in ", params$filtergroups, " were included into the analysis.")
+  }
+}
+if(!is.null(params$covariates)){
+  message(params$covariates, " were included into the analysis as covarites.")
+}
+
+
+
+
 ```
 
 ### 4.1 Volcano plot
