@@ -98,6 +98,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                                                              NA. = col_logical()), skip = 2) %>% 
       mutate(`Gene names` = Name) %>% 
       select(-c("Name", "NA."))
+    reportData$ssGSEA_collection = input$diff.gs.collection_file
   })
   
   ClinColClasses <- reactive({
@@ -527,7 +528,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     #Prepare interactive plot, reactive title and legend
     
     if (!is.null(input$expandFilter_gsea) && input$expandFilter_gsea == TRUE) {
-      Filnames = paste(" only ", input$filter_levels[1], collapse= "")
+      Filnames = paste(" only ", input$filter_levels, collapse= "")
     } else {
       Filnames = ""
     }
@@ -538,11 +539,12 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         title_begin = paste("Gene sets changed in ", names(ClinDomit$designMatrix)[1], 
                             " when compared to ", 
                             names(ClinDomit$designMatrix[2]), 
-                            Filnames, collapse = "")
+                             collapse = "")
       } else {
         title_begin =  paste("Gene sets regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
       })
-    reportBlocks$volcano_plot = temp_volcano + ggtitle(title_begin)
+    reportBlocks$volcano_title = title_begin
+    reportBlocks$volcano_plot = temp_volcano + labs(subtitle = title_begin)
     
     pp <- plotly::ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
       plotly::layout(title = paste0('Volcano plot',
@@ -647,7 +649,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     scatterPlot = ggplot(PD, aes(x = get(GR_fatcor), y = `log2 of LFQ value`)) + 
       geom_point(aes(x = get(GR_fatcor), y = `log2 of LFQ value`, colour = groups)) + 
       geom_smooth(method = "lm") +
-      labs(x = paste(GR_fatcor)) +
+      labs(x = paste(GR_fatcor), y = "Enrichment score") +
       facet_wrap(~`Gene name`) +
       theme_light()
     if (input$showLabels == TRUE) {
@@ -691,10 +693,10 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
     
     BoxPlot = ggplot(PD, aes(x = get(GR_fatcor), y = `Enrichment score`)) + 
-      geom_boxplot() +
+      geom_boxplot(outlier.size = -1) +
       geom_jitter(aes(colour = color)) +
       #geom_text_repel(aes(label=labels), show.legend = F, size = 4) +
-      labs(x = paste(GR_fatcor)) +
+      labs(x = paste(GR_fatcor), y = "Enrichment score") +
       facet_wrap(~`Gene set`) +
       theme_light()
     
@@ -749,11 +751,6 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                "Downregulated.Proteins" = limmaResult$df_down,
                "Limma.ExpDesign" = ClinDomit$designMatrix %>% rownames_to_column("PatientID"),
                "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2])))
-               #,
-              # "Upregulated.GeneSets" = gsea_regul$df_up,
-              # "Downregulated.GeneSets" = gsea_regul$df_down,
-              # "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
-              # "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap
                )
       openxlsx::write.xlsx(x, file, row.names = FALSE)
       dev.off()
@@ -779,7 +776,12 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         boxPlotDown = reportBlocks$boxPlotDown,
       #  ExpSetup = reportBlocks$ExpSetup,
         UpRegul = limmaResult$df_up,
-        DoRegul = limmaResult$df_down
+        DoRegul = limmaResult$df_down,
+      expDesign = ClinDomit$designMatrix,
+      covariates = reportBlocks$covariates,
+      filter = input$filter_levels,
+      volcano_title = reportBlocks$volcano_title,  
+      ssGSEA_collection = reportData$ssGSEA_collection
       )
       
       # Knit the document, passing in the `params` list, and eval it in a
@@ -802,17 +804,12 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     reportBlocks$ExpSetup <- 
       HTML(markdownToHTML(fragment.only=TRUE, text=c( 
-        #"* Input MaxQuant File:",protfile$name,
-        #"* Input Clinicaldata File:",clinfile$name$name,
-        "* Clinical grouping factor:", input$GR_fatcor_gsea,
-        "* Filter/stratification on:", input$filter_GR_fatcor,
-        "* Two groups to compare:", reportBlocks$contrastLevels[1],",", reportBlocks$contrastLevels[2],
-        "* The samples contributing to limma are:","total", nrow(ClinDomit$designMatrix),";",reportBlocks$contrastLevels[1],"(", sum(ClinDomit$designMatrix[1]),")","and", reportBlocks$contrastLevels[2],"(", sum(ClinDomit$designMatrix[2]),")", 
-        #kable_input,
+        "* Input gene set collection file:", reportData$ssGSEA_collection,
+        "* ", reportBlocks$volcano_title,
         scroll_box(kable_input,width = "70%", height = "200px"),
-        "* Total number of genes in limma are:",nrow(limmaResult$gene_list),
-        "* The number of genes **upregulated** and **downregulated** in ",reportBlocks$contrastLevels[1], " are ", nrow(limmaResult$up)," and " ,nrow(limmaResult$down), " respectively. ",
-        "* The threshold used to highlight significant genes is [BH corrected](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust) adjusted P value of" , input$adj.P.Val, "and absolute log fold change of ",input$logFC 
+        "* Total number of gene sets in differential enrichment calculation are:",nrow(limmaResult$gene_list),
+        "* The number of gene sets **upregulated** and **downregulated** in ",reportBlocks$contrastLevels[1], " are ", nrow(limmaResult$up)," and " ,nrow(limmaResult$down), " respectively. ",
+        "* The threshold used to highlight significant genes is [BH corrected](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust) adjusted P value of" , input$adj.P.Val, "and absolute enrichment score fold change of ",input$logFC 
         
       )))
     bsCollapsePanel(p("Detailed description",style = "color:#18bc9c"),

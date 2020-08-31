@@ -12,6 +12,11 @@ params:
   boxPlotDown: NA
   UpRegul: NA
   DoRegul: NA
+  expDesign: NA
+  covariates: NA
+  filter: NA
+  volcano_title: NA
+  ssGSEA_collection: NA
 ---
 
 ```{r setup, include=FALSE}
@@ -28,18 +33,14 @@ Missing values are imputed using the `r params$stats_proteinGroups$Imputation` m
 
 The calculation of ssGSEA (single-sample Gene Set Enrichment Analysis) scores is mainly a prerequisite to perform differential enrichment in step 4 and is adapted from Krug et al. [1] (https://github.com/broadinstitute/ssGSEA2.0). 
 
-Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. 
-Advantages of this approach include the flexible in- and exlcusion of samples without recalculation of differentially expressed proteins and presumably the possibility of reducing batch effects.
+Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. Advantages of this approach include the flexible in- and exlcusion of samples without recalculation of differentially expressed proteins and presumably the possibility of reducing batch effects.
 
 ### 2.1 Configuration
 
 Configuration of the ssGSEA algorithm implements the default parameters as stated at https://www.genepattern.org/modules/docs/ssGSEAProjection/4. 
 The exponential weight employed in calculation of enrichment scores was set to `r params$configuration$weight`. Number of permutations were set to `r params$configuration$nperm`. The correlation type was set to `r params$configuration$correl.type`.
 Gene sets whose overlap with the genes listed in the input GCT file are less than `r params$configuration$min.overlap` are excluded. 
-Of the ssGSEA algorithm version v4 is used. Gene set databases are from MSigDB version v6.1.
-
-### 2.2 Summary of ssGSEA calculation results
-
+Of the ssGSEA algorithm version v4 is used. Gene set database `r params$ssGSEA_collection` from MSigDB version v6.1 was used for calculations. 
 
 ## 3. Experimental setup of differential enrichment analysis
 
@@ -53,26 +54,23 @@ if(is.null(params$expDesign)){
 ```
 
 Furthermore, limma parametrized with trend correction = TRUE. 
-
-
-* covariates
-* multiple testing correction
-* thresholds of p value and FC
+In a stratified design, the groups not included in the actual comparison of interest are part of the design. In a filtered design, i.e. when a continuous response is used and a second variable is selected to include a specific group of samples into the analysis only, the samples not included are also not part of the design. 
 
 ## 4. Results of differential enrichment analysis
 
+ With respect to the above experimental design the plots and results of this report describe `r params$volcano_title`. `r ifelse(is.null(params$covariates), paste("No parameter "), paste0(params$covariates, sep = ",", collapse = " "))` was/were included as covariates.
 ```{r diff enrichment results, echo=F}
-if(params$ContinChoice_gsea == FALSE | ClinColClasses(params$mainParameter) == "factor") {
-  message("Gene sets called significant are changed in ", contrastGroup1, " when compared to ", contrastGroup2,".")
-} else {
-  message("Gene sets called significant are changed with regard to ", mainParamter, ".")
-  if(params$filter == TRUE){
-    message("Only samples included in ", params$filtergroups, " were included into the analysis.")
-  }
-}
-if(!is.null(params$covariates)){
-  message(params$covariates, " were included into the analysis as covarites.")
-}
+#if(names(params$expDesign)[1] != "(Intercept)") {
+#  message("Gene sets called significant are changed in ", names(params$expDesign)[1], " when compared to ", names(params$expDesign)[2],".")
+#} else {
+#  message("Gene sets called significant are changed with regard to ", names(params$expDesign)[1], ".")
+#  if(!is.na(params$filter)){
+#    message("Only samples included in ", params$filtergroups, " were included into the analysis.")
+#  }
+#}
+#if(!is.na(params$covariates)){
+#  message(params$covariates, " were included into the analysis as covariates.")
+#}
 
 
 
@@ -81,8 +79,6 @@ if(!is.null(params$covariates)){
 
 ### 4.1 Volcano plot
 Differential enrichment volcano plot, x axis denoting the fold change and y axis the -log10 of P.value from the limma [`toptable` function](https://www.rdocumentation.org/packages/limma/versions/3.28.14/topics/toptable). P-values are multiple testing corrected by using the [Benjamini-Hochberg procedure](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust). 
-
-
 
 ```{r Limma Output, echo=F}
 

@@ -955,7 +955,6 @@ server <- function(input, output, session) {
     #clinfile$name <-parseFilePaths(volumes2, input$demo_clin_data)
 
     if (length(clinfile$name$datapath) == "0"){
-      browser()
       disable("analyze")
       return(NULL)
     }
@@ -1161,19 +1160,15 @@ server <- function(input, output, session) {
     #shinyFeedback::feedbackWarning("n", !even, "Please select an even number")
     
     shiny::req(ClinDomit$designMatrix)
-    
-   # browser()
+
     if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
-      browser()
       analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
     }
     shiny::validate(need(sum(ClinDomit$designMatrix[,1])>=3, "Validate statement"))
 
     expDesignInst = ClinDomit$designMatrix %>% janitor::clean_names()
-   # browser()
     if (input$ContinChoice == FALSE){
       if (!is.null(need(sum(ClinDomit$designMatrix[,2])>=3, "TRUE"))) {
-        browser()
         analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
       }
       shiny::validate(need(sum(ClinDomit$designMatrix[,2])>=3, "Validate statement"))
