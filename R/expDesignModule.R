@@ -164,6 +164,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   })
   
   shiny::observeEvent(input$expandFilter_gsea, {
+    
     output$filter_group_gsea <- shiny::renderUI({
       shiny::selectInput(
         inputId = ns("filter_GR_fatcor"),
@@ -225,19 +226,20 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     })
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
   
-shiny::observe({
+  observeEvent(c(input$GR_fatcor_gsea,input$ContinChoice_gsea),{
+    input$GR_fatcor_gsea
+    input$ContinChoice_gsea
     shiny::req(input$GR_fatcor_gsea)
     shiny::req(input$ContinChoice_gsea)
-    input$GR_fatcor_gsea
     if(ClinColClasses()[input$GR_fatcor_gsea] != "numeric"){
       shiny::showNotification("Please make sure that you have selected a continuous variable.")
       updateCheckboxInput(session, "ContinChoice_gsea", value = FALSE)
     }
-})
-
-shiny::observe({
-    shiny::req(input$GR_fatcor_gsea)
-    shiny::req(input$ContinChoice_gsea)
+    
+  })
+  
+  observe({
+    req(input$GR_fatcor_gsea)
     input$GR_fatcor_gsea
     updateCheckboxInput(session, "expandFilter_gsea", value = FALSE)
   })

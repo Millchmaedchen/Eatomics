@@ -103,7 +103,8 @@ ui <- shiny::fluidPage(
                                    
                           ),
                           br(),
-                          shinyjs::disabled(shiny::actionButton("analyze","Analyze",class = "btn-primary"))),
+                          shinyjs::disabled(shiny::actionButton("analyze","Analyze",class = "btn-primary"))
+                          ),
                         
                         shiny::mainPanel(
                           shiny::tabsetPanel(id= "QCtab",type = "tabs",
@@ -401,7 +402,7 @@ server <- function(input, output, session) {
   #Select columns with specific intensity prefix (LFQ/iBAQ/..)
   insty <- shiny::reactive({
     input$analyze
-    data<- data()
+    data <- data()
     reportBlocks$linesFromMaxQuant = nrow(data)
       shiny::isolate(selectProteinData(data, intensityMetric = input$insty))
     
@@ -538,7 +539,7 @@ server <- function(input, output, session) {
   
   
   shiny::observeEvent({
-    input$analyze
+    input$ClinD
   }, { 
     
     output$labelCol<- shiny::renderUI({
@@ -552,6 +553,8 @@ server <- function(input, output, session) {
                        )
       )
     })
+    
+    
     
     pca_input_samples <- shiny::reactive({
       shiny::validate(need(data(), "Please upload a proteinGroups.txt file first."))
@@ -846,6 +849,7 @@ server <- function(input, output, session) {
   })
   
   shiny::observeEvent(input$expandFilter, {
+    
     output$filter_group_limma<- shiny::renderUI({
       shiny::selectInput(
         inputId = "filter_GR_fatcor",
@@ -918,6 +922,7 @@ server <- function(input, output, session) {
       shiny::updateCheckboxInput(session, "ContinChoice", value = FALSE)
     }
   })
+  
   shiny::observe({
     shiny::req(input$GR_fatcor)
     shiny::req(input$ContinChoice)
@@ -935,19 +940,27 @@ server <- function(input, output, session) {
   shinyFiles::shinyFileChoose(input, 'ClinDs', root=c(root='./../Data'), filetypes=c('', 'txt', 'tsv'))
   
   ClinData <- shiny::reactive({
-
-      shiny::validate(
-        need(input$ClinD != "", "Please provide a sample description file for upload on the previous tab.")
-        #need(input$demo_clin_data != "", "Please select a file for upload or choose to use the database connection.")
-      )
+    
+    if (is.null(input$ClinD)) {
+      return(NULL)
+    } else{
       clinfile$name <- input$ClinD
+    }
+
+      #shiny::validate(
+      #  need(input$ClinD != "", "Please provide a sample description file for upload on the previous tab.")
+        #need(input$demo_clin_data != "", "Please select a file for upload or choose to use the database connection.")
+    #  )
+      #clinfile$name <- input$ClinD
     #clinfile$name <-parseFilePaths(volumes2, input$demo_clin_data)
 
     if (length(clinfile$name$datapath) == "0"){
+      browser()
       disable("analyze")
       return(NULL)
     }
 
+      
     ClinData = readr::read_tsv(clinfile$name$datapath, 
     #ClinData = readr::read_tsv(input$demo_clin_data$datapath, 
                         na =c("", "NA", "N/A","0","<Null>"),
@@ -960,7 +973,7 @@ server <- function(input, output, session) {
   #     ClinData = ClinData %>% dplyr::rename(PatientID = freezeID_log)
    #  }
     ClinDomit$data = ClinData %>% janitor::clean_names()
-    enable("analyze") 
+    shinyjs::enable("analyze") 
     ClinData
   })
   
