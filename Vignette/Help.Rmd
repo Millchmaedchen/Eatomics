@@ -321,15 +321,13 @@ On both differential analysis tabs (step 2 and 4) there are buttons for displayi
 
 `r text_spec("Benjamini-Hochberg procedure", bold = T)` – BH procedure is included in the topTable function of the Limma package and the p.adjust method. It controls the false discovery rate (FDR) where the expected proportion of false positives among all positive test decisions are calculated. (doi: 10.1186/1471-2105-12-288)
 
-`r text_spec("ssGSEA", bold = T)` - The ssGSEA algorithm performs a transformation of protein abundance values into the higher abstraction level of gene sets, pathways or even phospho-site signatures on a sample level. Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. 
+`r text_spec("ssGSEA", bold = T)` - The ssGSEA algorithm performs a transformation of protein abundance values into the higher abstraction level of gene sets, pathways or even phospho-site signatures on a sample level. Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample (http://software.broadinstitute.org/cancer/software/genepattern/modules/docs/ssGSEAProjection/4).
 
 `r text_spec("ES and NES", bold = T)` - (Normalized) enrichement scores as calculated by the ssGSEA algorithm.
 
-`r text_spec("iBAQ", bold = T)` - Intensity  Based  Absolute Quantification refers to the sum of all the peptides intensities divided by the number of observable peptides of a protein https://doi.org/10.1016/j.euprot.2014.06.001
+`r text_spec("iBAQ", bold = T)` - Intensity  Based  Absolute Quantification refers to the sum of all the peptides intensities divided by the number of observable peptides of a protein (https://doi.org/10.1016/j.euprot.2014.06.001).
 
 `r text_spec("LFQ", bold = T)` - label-free quantification approach aims to compare the mass spectrometric signal of any given peptides or the number of fragment spectra identifying peptides of a given protein Quantitative mass spectrometry in proteomics.
-
-
 
 ### Imputation methods
 
@@ -339,7 +337,7 @@ On both differential analysis tabs (step 2 and 4) there are buttons for displayi
  
  * `r text_spec("QRLIC", bold = T)` - A missing data imputation method that performs the imputation of left-censored missing data using random draws from a truncated distribution with parameters estimated using quantile regression. Implemented in the imputeLCMD::impute.QRILC function. See impute.QRILC for details and additional parameters. Text is taken from https://lgatto.github.io/MSnbase/reference/impute-methods.html	
  
- * `r text_spec("Perseus-like", bold = T)`  or replaceMissingFromGaussian
+ * `r text_spec("Perseus-like", bold = T)` or replaceMissingFromGaussian - A missing data imputation method that performs imputation of left-censored missing data using random draws from a gaussian distribution. Parameters for down-shift and width of the distribution in relation to the distribution of valid values can be set internally.
  
 ### Distance/similarity Measures
  
