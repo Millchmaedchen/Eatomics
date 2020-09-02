@@ -45,8 +45,8 @@ Eatomics requires two file inputs:
  
 Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may use your own data or the demo files in Eatomics/Data from the github repository. The demo proteinGroups file represents a shortened version of the data assessed and described in Chen et al. [4] and is accompanied by a sample description file prepared by us, based on the publications supplementary data. 
 
-```{r}
-knitr::include_graphics(path = "Images/Input_Files.png")
+```{r echo=FALSE}
+knitr::include_graphics(path = "https://images.partycity.de/CUTO/38/3/front/v1/pop/4.jpg")
 ```
 
 
