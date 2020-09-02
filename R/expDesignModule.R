@@ -133,6 +133,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   }) 
   
   output$conditional_grouping <- shiny::renderUI({
+    req(ClinData())
     shiny::selectInput(
       inputId = ns("GR_fatcor_gsea"), 
       label = strong("Select the clinical grouping factor"),

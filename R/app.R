@@ -812,6 +812,7 @@ server <- function(input, output, session) {
   
   # Conditional UI elements
   output$labelColBox<- shiny::renderUI({
+    req(ClinData())
     shiny::conditionalPanel(condition = need(ClinData(), FALSE) , 
                      shiny::selectInput(
                        inputId = "labelColBox", 
@@ -824,6 +825,7 @@ server <- function(input, output, session) {
   })
   
   output$conditional_grouping_limma<- shiny::renderUI({
+    req(ClinData())
     shiny::selectInput(
       inputId = "GR_fatcor", 
       label = strong("Select the clinical grouping factor"),
@@ -855,6 +857,7 @@ server <- function(input, output, session) {
   }) 
   
   shiny::observeEvent(input$includeCovariates, {
+    req(ClinData())
     output$covariatesChoice<- shiny::renderUI({
       shiny::selectInput(
         inputId = "covariates",
@@ -868,6 +871,7 @@ server <- function(input, output, session) {
   shiny::observeEvent(input$expandFilter, {
     
     output$filter_group_limma<- shiny::renderUI({
+      req(ClinData())
       shiny::selectInput(
         inputId = "filter_GR_fatcor",
         label = strong("Select a second parameter"),
@@ -879,6 +883,7 @@ server <- function(input, output, session) {
     })
     
    output$categorizeSecNum <- shiny::renderUI({
+     req(ClinData())
      if (ClinColClasses()[input$filter_GR_fatcor]=='numeric') {
        d = ClinData() %>% dplyr::pull(input$filter_GR_fatcor)
        shiny::sliderInput(
