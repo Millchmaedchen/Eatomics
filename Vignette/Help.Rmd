@@ -11,6 +11,7 @@ output:
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(kableExtra)
 library(shiny)
+library("png")
 options(knitr.table.format = "html")
 ```
 
@@ -45,9 +46,10 @@ Eatomics requires two file inputs:
  
 Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may use your own data or the demo files in Eatomics/Data from the github repository. The demo proteinGroups file represents a shortened version of the data assessed and described in Chen et al. [4] and is accompanied by a sample description file prepared by us, based on the publications supplementary data. 
 
-```{r echo=FALSE}
-knitr::include_graphics(path = "https://images.partycity.de/CUTO/38/3/front/v1/pop/4.jpg")
+```{r echo=FALSE, fig.cap= "include some local pdf"}
+knitr::include_graphics(path = "../../../../Desktop/Untitled.png")
 ```
+
 
 
 # 2. Application walk-through {.tabset .tabset-fade .tabset-pills}
@@ -137,19 +139,21 @@ Protein intensities are cumulated across all samples and plotted according to th
 
 <div class = "column-right">
 
-![Visualization of protein abundance in a PCA.](Images/pca_detail.png){ width=90% }
+![Visualization of protein abundance in a PCA.](Images/pca_lower_res.png){ width=90% }
 
-![Sample-wise distribution overview of protein abundance data. ](Images/DistributionPlot.png){ width=90% }
+![Sample-wise distribution overview of protein abundance data. ](Images/Distribution_low_res.png){ width=90% }
 
 </div>
 
 <div class = "column-left-full">
 
-  <div class = "col-md-4"> ![Sample-wise coverage of protein abundance data. ](Images/ProteinNumbers-3.png){ width=90% } </div>
+  <div class = "col-md-4"> ![Sample-wise coverage of protein abundance data. ](Images/Coverage_low_res.png){ width=90% } </div>
 
   <div class = "col-md-4"> ![Sample to sample heatmap.](Images/StS_heatmap-2.png){ width=90% } </div>
 
   <div class = "col-md-4"> ![Cumulative protein intensities of all samples. ](Images/CumSumPlot.png){ width=90% } </div>
+  
+  <div class = "col-md-4"> ![Density of missing and valid values. ](Images/MisValDensity_low_res.png){ width=90% } </div>
 
 </div>
 
