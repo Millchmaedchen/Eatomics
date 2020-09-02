@@ -120,26 +120,26 @@ ui <- shiny::fluidPage(
                                                        shiny::checkboxInput("imputeforPCA", "Use imputed data for PCA", TRUE),
                                                        shiny::plotOutput("pca_input_samples", height = 800),
                                                       br(),
-                                                       shiny::downloadButton('downloadpca', 'Save'), 
-                                                      br(),
-                                                       downloadObjUI(id = "pca")  
+                                                      downloadObjUI(id = "pca"),
+                                                       shiny::downloadButton('downloadpca', 'Save') 
+ 
                                               ),
 
                                              shiny::tabPanel(title = "Distribution overview",
                                                              configurePlotColUI(id = "distr"),
                                                              shiny::plotOutput("distributionPlot", height = 800) ,
                                                              br(),
-                                                             shiny::downloadButton('downloadDistributionPlot', 'Save'),
-                                                             br(),
-                                                             downloadObjUI(id = "distr")  
+                                                             downloadObjUI(id = "distr"), 
+                                                             shiny::downloadButton('downloadDistributionPlot', 'Save')
+ 
                                              ),
                                               shiny::tabPanel(title = "Protein coverage",
                                                               configurePlotColUI(id = "coverage"),
                                                        shiny::plotOutput("numbers", height = 800),
                                                        br(),
-                                                       shiny::downloadButton('downloadNumbers', 'Save'),
-                                                       br(),
-                                                       downloadObjUI(id = "coverage")  
+                                                       downloadObjUI(id = "coverage"),
+                                                       shiny::downloadButton('downloadNumbers', 'Save')
+
                                               ),
                                               shiny::tabPanel(title = "Sample to sample heatmap",
                                                        shiny::selectizeInput(inputId = "distanceMetric",
@@ -149,25 +149,25 @@ ui <- shiny::fluidPage(
                                                        shiny::plotOutput("StS_heatmap", height = 600
                                                                          ),
                                                        br(),
-                                                       shiny::downloadButton('downloadStS_heatmap', 'Save'),
-                                                       br(),
-                                                       downloadObjUI(id = "sts_hm")  
+                                                       downloadObjUI(id = "sts_hm"),
+                                                       shiny::downloadButton('downloadStS_heatmap', 'Save')
+
                                               ),
                                              shiny::tabPanel(title = "Missing value densities",
                                                              shiny::plotOutput("misVal", height = 600),
                                                              br(),
-                                                             shiny::downloadButton('downloadmisVal', 'Save'),
-                                                             br(),
-                                                             downloadObjUI(id = "misVal")  
+                                                             downloadObjUI(id = "misVal"),
+                                                             shiny::downloadButton('downloadmisVal', 'Save')
+
                                              ),
                                               shiny::tabPanel(title = "Cumulative protein intensities",
                                                        shiny::plotOutput("CumSumPlot", height = 600),
                                                        br(),
                                                        DT::dataTableOutput('cumsum_table'),
                                                        br(),
-                                                       shiny::downloadButton('downloadCumSumPlot', 'Save'), 
-                                                       br(),
-                                                       downloadObjUI(id = "cumsum_int")  
+                                                       downloadObjUI(id = "cumsum_int"),
+                                                       shiny::downloadButton('downloadCumSumPlot', 'Save') 
+
                                               )
                         ),
                         br(),
@@ -208,7 +208,7 @@ ui <- shiny::fluidPage(
                           shiny::fluidRow(
                             column(8,
                                    plotly::plotlyOutput("limma"
-                                                ,height = 500
+                                                , height = 500
                                    ) %>% shinycssloaders::withSpinner()
                             ),
                             
@@ -222,15 +222,26 @@ ui <- shiny::fluidPage(
                                 shiny::sliderInput("logFC", "Log Fold Change", 0, min = 0, max = 10, step = 0.1)
                               )
                             ),
-                            br(),
+
                             column(12,
+                                   br()),
+                            column(6,downloadObjUI(id = "volcano")),
+                            column(6, shiny::downloadButton('downloadvolcano', 'Save')),
+                            column(12,
+                                   br(),
                                    DT::dataTableOutput('up'),
                                    DT::dataTableOutput('down'),
                                    br(),
                                    shiny::uiOutput("labelColBox"),
                                    shiny::checkboxInput("showLabels", "Blend in PatientID", FALSE),
-                                   shiny::plotOutput("boxPlotUp"),
-                                   shiny::plotOutput("boxPlotDown"),
+                                   shiny::plotOutput("boxPlotUp")),
+                            column(6, downloadObjUI(id = "boxscatter_up")),  
+                            column(6, shiny::downloadButton('downloadboxscatter_up', 'Save')), 
+                            column(12, shiny::plotOutput("boxPlotDown")),
+                            column(6, downloadObjUI(id = "boxscatter_do")),  
+                            column(6, shiny::downloadButton('downloadboxscatter_do', 'Save')), 
+                            column(12, 
+                                   br(),
                                    shiny::htmlOutput("doc1")
                             )),
                           
@@ -705,7 +716,6 @@ server <- function(input, output, session) {
       if (input$distanceMetric == "Pearson") {
         corr = TRUE
       } else {corr = FALSE}
-      browser()
       QCreport$StSheatmap = plot_StS_heatmap(original, corr = corr)
       QCreport$StSDistMetric = input$distanceMetric
       QCreport$StSheatmap
@@ -1084,8 +1094,12 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$analyzeLimma ,{
-    limmaResult$gene_list = NULL #refresh volcano plot
+    limmaResult$gene_list = NULL #refresh all plots on a new design
     reportBlocks$volcano_plot = NULL 
+    reportBlocks$boxPlotUp = NULL
+    reportBlocks$scatterPlotUp = NULL
+    reportBlocks$boxPlotDown = NULL
+    reportBlocks$scatterPlotDown = NULL
     
    if (!is.null(need(proteinAbundance$original, "TRUE"))) { # check if protein abundance is loaded
       analyzeAlerts$somelist = c(TRUE, "Please upload a proteinGroups file first (previous tab).")  
@@ -1238,7 +1252,7 @@ server <- function(input, output, session) {
     
     reportBlocks$volcano_plot = 
       ggplot2::ggplot(data=gene_list,aes(x=logFC, y=-log10(P.Value) , colour=threshold)) +
-      ggtitle("this should be a title") +
+      ggtitle("Volcano plot") +
     #  ggtitle(paste(ClinDomit$mainParameter,": ", names(ClinDomit$designMatrix)[2]," vs ", names(ClinDomit$designMatrix[1]), collapse = "")) +
        ggplot2::geom_point(shape=20, data = gene_list, aes(text= rownames(gene_list)), size = 1, alpha = 0.4) +
       #labs(color = paste("Threshold \n adj.p < ", input$adj.P.Val, " and \n log2FC +/- ", input$logFC)) +
@@ -1293,12 +1307,13 @@ server <- function(input, output, session) {
       title_begin = paste("Proteins with a change in abundance in ", names(ClinDomit$designMatrix)[1], 
                                            " when compared to \n", 
                                            names(ClinDomit$designMatrix[2]), 
-                                           Filnames, collapse = "")
+                                          collapse = "")
     } else {
       title_begin =  paste("Proteins abundance with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
     }
     )
-    reportBlocks$volcano_plot = temp_volcano + ggtitle(title_begin)
+    reportBlocks$volcano_title = title_begin
+    reportBlocks$volcano_plot = temp_volcano + labs(subtitle = title_begin)
 
     pp <- plotly::ggplotly(temp_volcano, tooltip = "text") %>% 
       plotly::layout(title = paste0('Volcano plot',
@@ -1319,6 +1334,17 @@ server <- function(input, output, session) {
                      )
     pp
   })
+  
+  output$downloadvolcano <- shiny::downloadHandler(
+    filename = "volcano.pdf",
+    content = function(file) {
+      plot_parameters = callModule(downloadObj, id = "volcano", title = paste(reportBlocks$volcano_title), filename = "volcano.pdf")
+      reportBlocks$volcano_plot = add_plot_info(reportBlocks$volcano_plot, plot_parameters)
+      #grDevices::pdf(file)
+      #print(QCreport$pca)
+      #grDevices::dev.off()
+      ggsave(filename = file, plot = reportBlocks$volcano_plot, device = "pdf", dpi = "print")
+    })
   
   output$boxPlotUp <- shiny::renderPlot({
     shiny::validate(need(input$up_rows_selected, message = "Select up- or downregulated proteins from the table to generate a display of protein abundance in the selected groups."))
@@ -1345,6 +1371,19 @@ server <- function(input, output, session) {
     })
   })
   
+  output$downloadboxscatter_up <- shiny::downloadHandler(
+    filename = "BoxScatter.pdf",
+    content = function(file) {
+      plot_parameters = callModule(downloadObj, id = "boxscatter_up", title = "View on individual protein abundance", filename = "BoxScatter.pdf")
+      if(!is.null(reportBlocks$boxPlotUp)) {
+        reportBlocks$boxPlotUp = add_plot_info(reportBlocks$boxPlotUp, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$boxPlotUp, device = "pdf", dpi = "print")
+      } else {
+        reportBlocks$scatterPlotUp = add_plot_info(reportBlocks$scatterPlotUp, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$scatterPlotUp, device = "pdf", dpi = "print")
+      }
+    })
+  
   output$boxPlotDown <- renderPlot({
     shiny::validate(need(input$down_rows_selected, FALSE))
     original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
@@ -1366,6 +1405,19 @@ server <- function(input, output, session) {
       return(reportBlocks$scatterPlotDown)
     }
   })
+  
+  output$downloadboxscatter_do <- shiny::downloadHandler(
+    filename = "BoxScatter.pdf",
+    content = function(file) {
+      plot_parameters = callModule(downloadObj, id = "boxscatter_do", title = "View on individual protein abundance", filename = "BoxScatter.pdf")
+      if(!is.null(reportBlocks$boxPlotDown)) {
+        reportBlocks$boxPlotDown = add_plot_info(reportBlocks$boxPlotDown, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$boxPlotDown, device = "pdf", dpi = "print")
+      } else {
+        reportBlocks$scatterPlotDown = add_plot_info(reportBlocks$scatterPlotDown, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$scatterPlotDown, device = "pdf", dpi = "print")
+      }
+    })
   
   createLineScatterPlot <- function(rows_selected, proteinData, CD_clean, GR_fatcor, limmaResult, labelColBox){
     s_up = rows_selected
@@ -1581,6 +1633,8 @@ server <- function(input, output, session) {
               volcano_plot = reportBlocks$volcano_plot,
               boxPlotUp = reportBlocks$boxPlotUp,
               boxPlotDown = reportBlocks$boxPlotDown,
+              scatterPlotUp = reportBlocks$scatterPlotUp,
+              scatterPlotDown = reportBlocks$scatterPlotDown,
               ExpSetup = reportBlocks$ExpSetup,
               UpRegul = limmaResult$df_up,
               DoRegul = limmaResult$df_down

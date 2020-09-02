@@ -41,16 +41,26 @@ expDesignModule_UI <- function(id) {
             sliderInput(ns("logFC"), "Log Fold Change", 0, min = 0, max = 10, step = 0.1)
           )
         ),
-        br(),
         column(12,
+               br()),
+        column(6,downloadObjUI(id = ns("volcano"))),
+        column(6, shiny::downloadButton(ns('downloadvolcano'), 'Save')),
+        column(12,
+               br(),
                DT::dataTableOutput(ns('up')),
                DT::dataTableOutput(ns('down')),
                br(),
-               uiOutput(ns("labelColBox")),
-               checkboxInput(ns("showLabels"), "Blend in PatientID", FALSE),
-               plotOutput(ns("boxPlotUp")),
-               plotOutput(ns("boxPlotDown")),
-               htmlOutput(ns("doc1"))
+               shiny::uiOutput(ns("labelColBox")),
+               shiny::checkboxInput(ns("showLabels"), "Blend in PatientID", FALSE),
+               shiny::plotOutput(ns("boxPlotUp"))),
+        column(6, downloadObjUI(id = ns("boxscatter_up"))),  
+        column(6, shiny::downloadButton(ns('downloadboxscatter_up'), 'Save')), 
+        column(12, shiny::plotOutput(ns("boxPlotDown"))),
+        column(6, downloadObjUI(id = ns("boxscatter_do"))),  
+        column(6, shiny::downloadButton(ns('downloadboxscatter_do'), 'Save')), 
+        column(12, 
+               br(),
+               shiny::htmlOutput(ns("doc1"))
         )),
       
       br(),
@@ -343,8 +353,13 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   })
   
   observeEvent(input$analyze_diff_gsea ,{
-    limmaResult$gene_list = NULL #refresh result list
+    limmaResult$gene_list = NULL #refresh result list and all plots
     reportBlocks$volcano_plot = NULL
+    reportBlocks$volcano_plot = NULL 
+    reportBlocks$boxPlotUp = NULL
+    reportBlocks$scatterPlotUp = NULL
+    reportBlocks$boxPlotDown = NULL
+    reportBlocks$scatterPlotDown = NULL
     
     if (!is.null(need(proteinAbundance$original, "TRUE"))) { # check if protein abundance is loaded
       analyzeAlerts$somelist = c(TRUE, "Please calculate enrichment scores first (previous tab).")  
@@ -492,13 +507,14 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     reportBlocks$volcano_plot = 
       ggplot(data=gene_list, aes(x=logFC, y=-log10(P.Value) , colour=threshold)) +
-      #ggtitle(paste(Factor,": ", names(ClinDomit$designMatrix)[2]," vs ", names(ClinDomit$designMatrix[1]), Filnames, collapse = "")) +
+      ggtitle("Volcano plot") +
       geom_point(shape=20, data = gene_list, aes(text= rownames(gene_list)), size = 1, alpha = 0.4) +
       #labs(color = paste("Threshold \n adj.p < ", input$adj.P.Val, " and \n log2FC +/- ", input$logFC)) +
       theme(plot.title = element_text(hjust = 0.5, face = "bold")) + 
       scale_color_tableau() +
       theme_light() +
-      theme(legend.title = element_blank())
+      #theme(legend.title = element_blank()) +
+      guides(color = guide_legend(title="Significant"))
     
   })
   
@@ -591,6 +607,19 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
   })
   
+  output$downloadboxscatter_up <- shiny::downloadHandler(
+    filename = "BoxScatter.pdf",
+    content = function(file) {
+      plot_parameters = callModule(downloadObj, id = ns("boxscatter_up"), title = "View on individual gene set enrichment scores", filename = "BoxScatter.pdf")
+      if(!is.null(reportBlocks$boxPlotUp)) {
+        reportBlocks$boxPlotUp = add_plot_info(reportBlocks$boxPlotUp, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$boxPlotUp, device = "pdf", dpi = "print")
+      } else {
+        reportBlocks$scatterPlotUp = add_plot_info(reportBlocks$scatterPlotUp, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$scatterPlotUp, device = "pdf", dpi = "print")
+      }
+    })
+  
   output$boxPlotDown <- renderPlot({
     validate(need(input$down_rows_selected, FALSE))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
@@ -612,6 +641,19 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       return(reportBlocks$scatterPlotDown)
     }
   })
+  
+  output$downloadboxscatter_do <- shiny::downloadHandler(
+    filename = "BoxScatter.pdf",
+    content = function(file) {
+      plot_parameters = callModule(downloadObj, id = ns("boxscatter_do"), title = "View on individual gene set enrichment scores", filename = "BoxScatter.pdf")
+      if(!is.null(reportBlocks$boxPlotDown)) {
+        reportBlocks$boxPlotDown = add_plot_info(reportBlocks$boxPlotDown, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$boxPlotDown, device = "pdf", dpi = "print")
+      } else {
+        reportBlocks$scatterPlotDown = add_plot_info(reportBlocks$scatterPlotDown, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$scatterPlotDown, device = "pdf", dpi = "print")
+      }
+    })
   
   createLineScatterPlot <- function(rows_selected, proteinData, CD_clean, GR_fatcor, limmaResult, labelColBox){
     s_up = rows_selected

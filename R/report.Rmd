@@ -25,6 +25,8 @@ params:
   DoRegul: NA
   boxPlotUp: NA
   boxPlotDown: NA
+  scatterPlotUp: NA
+  scatterPlotDown: NA
  
 ---
 
@@ -151,16 +153,20 @@ if(is.null(params$volcano_plot)){
 }
 ```
 
-### 2.2 Boxplots of selected protein abundance
+### 2.2 Box or scatter plots of selected protein abundance
 
 User selected proteins showing higher abundance. 
 
 ```{r Limma BoxplotUp, echo=F}
 
-if(is.null(params$boxPlotUp)){
-  message("The boxplot for proteins significantly higher in abundance was not computed during the analysis and thus is not part of this report.\n")
+if(is.null(params$boxPlotUp) & is.null(params$scatterPlotUp)){
+  message("The plot was not computed during the analysis and thus is not part of this report.\n")
 } else {
-  params$boxPlotUp
+  if(is.null(params$boxPlotUp)){
+    params$scatterPlotUp
+  } else {
+    params$boxPlotUp
+  }
 }
 ```
 
@@ -168,10 +174,14 @@ User selected proteins showing lower abundance.
 
 ```{r Limma BoxplotDown, echo=F}
 
-if(is.null(params$boxPlotDown)){
-  message("The boxplot for proteins significantly lower in abundance was not computed during the analysis and thus is not part of this report.\n")
+if(is.null(params$boxPlotDown) & is.null(params$scatterPlotDown)){
+  message("The plot was not computed during the analysis and thus is not part of this report.\n")
 } else {
-  params$boxPlotDown
+  if(is.null(params$boxPlotDown)){
+    params$scatterPlotDown
+  } else {
+    params$boxPlotDown
+  }
 }
 ```
 

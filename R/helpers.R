@@ -221,12 +221,13 @@ plot_StS_heatmap <- function(proteinAbundance, corr = FALSE){
   }
   sampleDistMatrix <- as.matrix( sampleDists )
   colors = grDevices::colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
-  pheatmap::pheatmap(sampleDistMatrix,
+  dummy = pheatmap::pheatmap(sampleDistMatrix,
            col = colors,
            main= "Sample to Sample Heatmap",
            legend=TRUE,
            fontsize_row = 8,
            fontsize_col= 8)
+  return(dummy$gtable)
 }
 
 plot_misValDens <- function(proteinAbundance){

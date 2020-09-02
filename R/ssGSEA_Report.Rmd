@@ -17,6 +17,8 @@ params:
   filter: NA
   volcano_title: NA
   ssGSEA_collection: NA
+  scatterPlotUp: NA
+  scatterPlotDown: NA
 ---
 
 ```{r setup, include=FALSE}
@@ -95,10 +97,14 @@ User selected pathways/gene sets showing higher enrichment scores.
 
 ```{r Limma BoxplotUp, echo=F}
 
-if(is.null(params$boxPlotUp)){
-  message("The boxplot for enriched pathways (higher) was not computed during the analysis and thus is not part of this report.\n")
+if(is.null(params$boxPlotUp) & is.null(params$scatterPlotUp)){
+  message("The plot was not computed during the analysis and thus is not part of this report.\n")
 } else {
-  params$boxPlotUp
+  if(is.null(params$boxPlotUp)){
+    params$scatterPlotUp
+  } else {
+    params$boxPlotUp
+  }
 }
 ```
 
@@ -106,10 +112,14 @@ User selected pathways/gene sets showing lower enrichment scores.
 
 ```{r Limma BoxplotDown, echo=F}
 
-if(is.null(params$boxPlotDown)){
-  message("The boxplot for enriched pathways (lower) was not computed during the analysis and thus is not part of this report.\n")
+if(is.null(params$boxPlotDown) & is.null(params$scatterPlotDown)){
+  message("The plot was not computed during the analysis and thus is not part of this report.\n")
 } else {
-  params$boxPlotDown
+  if(is.null(params$boxPlotDown)){
+    params$scatterPlotDown
+  } else {
+    params$boxPlotDown
+  }
 }
 ```
 
