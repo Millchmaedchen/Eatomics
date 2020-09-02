@@ -48,6 +48,9 @@ install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools
 ```
 update.packages(ask = FALSE, checkBuilt = TRUE)
 ```
+
+- if the online version of the tool seems to be very slow, it might help to disable the websocket protocol for this site in your browser. Within the application, press the keyboard shortcut: Ctrl+Alt+Shift+A (or, from a Mac: control+option+shift+A). This will open a window that will allow you to select or deselect protocols. More info at https://docs.rstudio.com/shiny-server/#disable_protocols.
+
 # References
 
 1: Krug, K., et al., A Curated Resource for Phosphosite-specific Signature Analysis. Mol Cell Proteomics, 2019. 18(3): p. 576-593.
