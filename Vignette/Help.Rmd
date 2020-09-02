@@ -45,7 +45,10 @@ Eatomics requires two file inputs:
  
 Access to demo data is possible directly via the upload button if ou are testing on our public server. For your local installation you may use your own data or the demo files in Eatomics/Data from the github repository. The demo proteinGroups file represents a shortened version of the data assessed and described in Chen et al. [4] and is accompanied by a sample description file prepared by us, based on the publications supplementary data. 
 
-![Examples of input files needed for Eatomics are an evidence file as produced by the MaxQuant algorithm (left) and a sample description file which may contain as many parameters as available.](Images/Input_Files.png){ width=100% }
+```{r}
+knitr::include_graphics(path = "Images/Input_Files.png")
+```
+
 
 # 2. Application walk-through {.tabset .tabset-fade .tabset-pills}
 
@@ -92,6 +95,10 @@ Select and load the clinical data input file (e.g clinicaldata.txt), as specifie
 </div>
 
 <div class = "column-right">
+
+```{r pressure, echo=FALSE, fig.cap="A caption", out.width = '100%'}
+#knitr::include_graphics("Images/Eatomics_Load_Panel.png")
+```
 
 ![Configuration panel to load input data and to prepare the data set for analysis. ](Images/Eatomics_Load_Panel.png){ width=90% }
 
