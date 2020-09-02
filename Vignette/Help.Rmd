@@ -231,7 +231,7 @@ The color of individual dots can be chosen to reflect a parameter from the sampl
 
 The calculation of ssGSEA (single-sample Gene Set Enrichment Analysis) scores is mainly a prerequisite to perform differential enrichment in step 4 and is adapted from Krug et al. [1] (https://github.com/broadinstitute/ssGSEA2.0). 
 
-Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. 
+The ssGSEA algorithm performs a transformation of protein abundance values into the higher abstraction level of gene sets or pathways on a sample level. Each ssGSEA enrichment score (ES or normalized ES (NES)) represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. The output of this step are three files basically containing all gene sets of a gene set database and a corresponding enrichment score per sample. Additinally, p values or false discovery rates are calculated. 
 Advantages of this approach include the flexible in- and exlcusion of samples without recalculation of differentially expressed proteins and presumably the possibility of reducing batch effects.
 
 </div>
@@ -264,7 +264,7 @@ As such, step 4 allows the user to apply the research hypothesis directly to the
 
 <div class = "column-left">
 
-As a result, the UI is almost identical as in step 2. As a difference, instead of using the prepared preotein abundance data,  the user has to `r text_spec("choose the enrichment score file", background = "#2C3E50", color = "white", bold = T)` from those prepared on the ssGSEA tab. The selected file should be the plain enrichment score file, so neither the file containing the p-values suffix, nor fdr-suffix file are appropriate. 
+As a result, the UI is almost identical to step 2. As a difference, instead of using the prepared preotein abundance data,  the user has to `r text_spec("choose the enrichment score file", background = "#2C3E50", color = "white", bold = T)` from those prepared on the ssGSEA tab. The selected file should be the plain enrichment score file, so neither the file containing the p-values suffix, nor fdr-suffix file are appropriate. 
 After configuring the experimental design, results are visualized in the interactive volcano plot and gene lists and box plots are available for further exploration as well. 
 Significant results are gene sets, e.g. GO terms or pathways, that are enriched in the first experimental group versus the second group. Fold changes give an impression on the effect size, which is an advantage over other methods, which mainly deliver p-values to assess importance.
 
@@ -310,6 +310,44 @@ On both differential analysis tabs (step 2 and 4) there are buttons for displayi
 
 5: Trevor Hastie, Robert Tibshirani, Balasubramanian Narasimhan and Gilbert Chu (2018). impute: impute: Imputation for
   microarray data. R package version 1.56.0.
+  
+# 4. Glossary
+
+`r text_spec("MaxQuant", bold = T)` -  MaxQuant is one of the most frequently used platforms for mass-spectrometry (MS)-based proteomics data analysis. It integrates a multitude of algorithms, enabling complete analysis of MS data. One of the major strengths of MaxQuant is that, by the application of advanced algorithms, it substantially improves mass precision as well as mass accuracy. (https://www.nature.com/articles/nprot.2016.136)
+
+`r text_spec("PCA", bold = T)` - Principal Component Analysis is a dimensionality-reduction method that is often used to reduce the dimensionality of large data sets, by transforming a large set of variables into a smaller one that still contains most of the information in the large set.
+
+`r text_spec("Limma", bold = T)` - Limma is the algorithm underlying the calculation of differences in protein abundance. Limma is based on linear models to calculate differential abundance and takes the model of data distribution, mean-variance trend, missing data and multiple testing correction into account.  
+
+`r text_spec("Benjamini-Hochberg procedure", bold = T)` – BH procedure is included in the topTable function of the Limma package and the p.adjust method. It controls the false discovery rate (FDR) where the expected proportion of false positives among all positive test decisions are calculated. (doi: 10.1186/1471-2105-12-288)
+
+`r text_spec("ssGSEA", bold = T)` - The ssGSEA algorithm performs a transformation of protein abundance values into the higher abstraction level of gene sets, pathways or even phospho-site signatures on a sample level. Each ssGSEA enrichment score represents the degree to which the genes in a particular gene set are coordinately up- or down-regulated within a single sample. 
+
+`r text_spec("ES and NES", bold = T)` - (Normalized) enrichement scores as calculated by the ssGSEA algorithm.
+
+`r text_spec("iBAQ", bold = T)` - Intensity  Based  Absolute Quantification refers to the sum of all the peptides intensities divided by the number of observable peptides of a protein https://doi.org/10.1016/j.euprot.2014.06.001
+
+`r text_spec("LFQ", bold = T)` - label-free quantification approach aims to compare the mass spectrometric signal of any given peptides or the number of fragment spectra identifying peptides of a given protein Quantitative mass spectrometry in proteomics.
+
+
+
+### Imputation methods
+
+ * `r text_spec("knn", bold = T)`  (k-nearest-neighbour) - The k nearest neighbors algorithm can be used for imputing missing data by finding the k closest neighbors to the observation with missing data and then imputing them based on the the non-missing values in the neighbors. (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4959387/)
+ 
+ * `r text_spec("MinDet", bold = T)` - Performs the imputation of left-censored missing data using a deterministic minimal value approach. Considering a expression data with n samples and p features, for each sample, the missing entries are replaced with a minimal value observed in that sample. The minimal value observed is estimated as being the q-th quantile (default q = 0.01) of the observed values in that sample. Implemented in the imputeLCMD::impute.MinDet function. See impute.MinDet for details and additional parameters. Text is taken from https://lgatto.github.io/MSnbase/reference/impute-methods.html	
+ 
+ * `r text_spec("QRLIC", bold = T)` - A missing data imputation method that performs the imputation of left-censored missing data using random draws from a truncated distribution with parameters estimated using quantile regression. Implemented in the imputeLCMD::impute.QRILC function. See impute.QRILC for details and additional parameters. Text is taken from https://lgatto.github.io/MSnbase/reference/impute-methods.html	
+ 
+ * `r text_spec("Perseus-like", bold = T)`  or replaceMissingFromGaussian
+ 
+### Distance/similarity Measures
+ 
+ * `r text_spec("Pearson", bold = T)` - Pearson correlation is a widely used correlation statistic to quantify the relationship between linearly related variables. The pearson correlation ranges between -1 and 1 with 1 meaning full positive correlation and -1 meaning full reciprocal correlation. Thus, a coefficient of 0 means no corrlation at all. 
+ 
+ * `r text_spec("Eucledian", bold = T)` - The euclidean distance is the ordinary straight-line distance between two objects. This distance measure is used to measure the distance for two to n dimensions. The higher the distance, the more dissimilar are two or more samples.  https://link.springer.com/chapter/10.1007/978-81-322-0491-6_63
+
+
 
 </div>
 
