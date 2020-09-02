@@ -721,7 +721,7 @@ server <- function(input, output, session) {
       QCreport$StSheatmap
     })
     
-    output$downloadStS_heatmap <- shiny::downloadHandler(
+    output$download$StS_heatmap <- shiny::downloadHandler(
       filename = "StS_heatmap.pdf",
       content = function(file) {
         plot_parameters = callModule(downloadObj, id = "sts_hm", title = "Sample to sample heatmap", filename = "StS_heatmap.pdf")
