@@ -41,16 +41,26 @@ expDesignModule_UI <- function(id) {
             sliderInput(ns("logFC"), "Log Fold Change", 0, min = 0, max = 10, step = 0.1)
           )
         ),
-        br(),
         column(12,
+               br()),
+        column(6,downloadObjUI(id = ns("volcano"))),
+        column(6, shiny::downloadButton(ns('downloadvolcano'), 'Save')),
+        column(12,
+               br(),
                DT::dataTableOutput(ns('up')),
                DT::dataTableOutput(ns('down')),
                br(),
-               uiOutput(ns("labelColBox")),
-               checkboxInput(ns("showLabels"), "Blend in PatientID", FALSE),
-               plotOutput(ns("boxPlotUp")),
-               plotOutput(ns("boxPlotDown")),
-               htmlOutput(ns("doc1"))
+               shiny::uiOutput(ns("labelColBox")),
+               shiny::checkboxInput(ns("showLabels"), "Blend in PatientID", FALSE),
+               shiny::plotOutput(ns("boxPlotUp"))),
+        column(6, downloadObjUI(id = ns("boxscatter_up"))),  
+        column(6, shiny::downloadButton(ns('downloadboxscatter_up'), 'Save')), 
+        column(12, shiny::plotOutput(ns("boxPlotDown"))),
+        column(6, downloadObjUI(id = ns("boxscatter_do"))),  
+        column(6, shiny::downloadButton(ns('downloadboxscatter_do'), 'Save')), 
+        column(12, 
+               br(),
+               shiny::htmlOutput(ns("doc1"))
         )),
       
       br(),
@@ -98,6 +108,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                                                              NA. = col_logical()), skip = 2) %>% 
       mutate(`Gene names` = Name) %>% 
       select(-c("Name", "NA."))
+    reportData$ssGSEA_collection = input$diff.gs.collection_file
   })
   
   ClinColClasses <- reactive({
@@ -164,6 +175,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   })
   
   shiny::observeEvent(input$expandFilter_gsea, {
+    
     output$filter_group_gsea <- shiny::renderUI({
       shiny::selectInput(
         inputId = ns("filter_GR_fatcor"),
@@ -225,10 +237,18 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     })
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
   
-  observe({
-    ClinColClasses()[input$GR_fatcor_gsea] != "numeric"
-    updateCheckboxInput(session, "ContinChoice_gsea", value = FALSE)
+  observeEvent(c(input$GR_fatcor_gsea,input$ContinChoice_gsea),{
+    input$GR_fatcor_gsea
+    input$ContinChoice_gsea
+    shiny::req(input$GR_fatcor_gsea)
+    shiny::req(input$ContinChoice_gsea)
+    if(ClinColClasses()[input$GR_fatcor_gsea] != "numeric"){
+      shiny::showNotification("Please make sure that you have selected a continuous variable.")
+      updateCheckboxInput(session, "ContinChoice_gsea", value = FALSE)
+    }
+    
   })
+  
   observe({
     req(input$GR_fatcor_gsea)
     input$GR_fatcor_gsea
@@ -251,18 +271,20 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   )
   , {
     limmaResult$gene_list = NULL #refresh volcano plot
+    ClinDomit$filterParameter = NULL
+    ClinDomit$mainParameter = NULL
     ClinDomit$mainParameter = janitor::make_clean_names(input$GR_fatcor_gsea)
     
     ## categorize numeric data - first parameter
     if (input$ContinChoice_gsea == FALSE & ClinColClasses_2()[ClinDomit$mainParameter]=='numeric') {
-      req(input$num.cutoff)
+      shiny::req(input$num.cutoff)
       ClinDomit$data = ClinDomit$data %>% 
-        mutate(categorizedParameter = 
+        dplyr::mutate(categorizedParameter = 
                  cut(dplyr::pull(ClinDomit$data, ClinDomit$mainParameter), 
                      breaks = c(-Inf, input$num.cutoff, Inf), 
                      labels = c(paste('less than or equal to', input$num.cutoff, sep='_'), paste('greater than', input$num.cutoff,sep='_'))
                  ))  %>% 
-        mutate_if(is.character, as.factor)
+        dplyr::mutate_if(is.character, as.factor)
       #%>% 
       #dplyr::select(-c(!!mainParameter)) 
       colnames(ClinDomit$data)[colnames(ClinDomit$data) == "categorizedParameter"] = paste(input$GR_fatcor_gsea, "cat", sep = "_", collapse = "_") %>% janitor::make_clean_names() 
@@ -274,14 +296,14 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       ## categorize second numeric parameter
       ClinDomit$filterParameter =  janitor::make_clean_names(input$filter_GR_fatcor)
       if (ClinColClasses()[input$filter_GR_fatcor]=='numeric') {
-        req(input$filter_num.cutoff)
+        shiny::req(input$filter_num.cutoff)
         ClinDomit$data = ClinDomit$data %>% 
-          mutate(filterParameter = 
+          dplyr::mutate(filterParameter = 
                    cut(dplyr::pull(ClinDomit$data, ClinDomit$filterParameter), 
                        breaks = c(-Inf, input$filter_num.cutoff, Inf), 
                        labels = c(paste('less than or equal to', input$filter_num.cutoff, sep='_'), paste('greater than', input$filter_num.cutoff,sep='_'))
                    )) %>% 
-          mutate_if(is.character, as.factor)
+          dplyr::mutate_if(is.character, as.factor)
 
         # if first parameter stays continuous, the second parameter becomes a filter and needs to be saved for experimental design creation 
         if (ClinColClasses_2()[ClinDomit$mainParameter] =='numeric' & input$ContinChoice_gsea == TRUE){
@@ -292,8 +314,8 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
           # ClinDomit$filterParameter = input$filter_GR_fatcor
         } else {## unite cat first parameter and categorized second parameter, when first is cat or categorized
           ClinDomit$data = ClinDomit$data %>% 
-            unite("newFactor", ClinDomit$mainParameter, filterParameter, remove = FALSE) %>% 
-            mutate_if(is.character, as.factor)
+            tidyr::unite("newFactor", ClinDomit$mainParameter, filterParameter, remove = FALSE) %>% 
+            dplyr::mutate_if(is.character, as.factor)
           colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
           ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
           ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
@@ -306,7 +328,9 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         }else{
           #req(input$filter_levels)
           ## unite cat first and cat second parameter in the case of two cat parameters in the first place
-          ClinDomit$data = ClinDomit$data %>% unite("newFactor", ClinDomit$mainParameter, ClinDomit$filterParameter, remove = FALSE)  %>% mutate_if(is.character, as.factor)
+          ClinDomit$data = ClinDomit$data %>% 
+            tidyr::unite("newFactor", ClinDomit$mainParameter, ClinDomit$filterParameter, remove = FALSE)  %>% 
+            dplyr::mutate_if(is.character, as.factor)
           colnames(ClinDomit$data)[colnames(ClinDomit$data) == "newFactor"] = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
           ClinDomit$data = ClinDomit$data[,!duplicated(colnames(ClinDomit$data), fromLast = TRUE)]
           ClinDomit$mainParameter = paste(ClinDomit$mainParameter, ClinDomit$filterParameter, sep = "_", collapse = "_")
@@ -329,8 +353,13 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
   })
   
   observeEvent(input$analyze_diff_gsea ,{
-    limmaResult$gene_list = NULL #refresh result list
+    limmaResult$gene_list = NULL #refresh result list and all plots
     reportBlocks$volcano_plot = NULL
+    reportBlocks$volcano_plot = NULL 
+    reportBlocks$boxPlotUp = NULL
+    reportBlocks$scatterPlotUp = NULL
+    reportBlocks$boxPlotDown = NULL
+    reportBlocks$scatterPlotDown = NULL
     
     if (!is.null(need(proteinAbundance$original, "TRUE"))) { # check if protein abundance is loaded
       analyzeAlerts$somelist = c(TRUE, "Please calculate enrichment scores first (previous tab).")  
@@ -343,8 +372,8 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
     #    }
     if (input$expandFilter_gsea == TRUE & input$ContinChoice_gsea == FALSE) {
-      req(input$contrastLevels)
-    }
+      shiny::req(input$contrastLevels)
+      }
     if ((!is.null(need(input$levels, "TRUE")) | length(input$levels) != 2) & ClinColClasses()[input$GR_fatcor_gsea]!='numeric' & input$expandFilter_gsea == FALSE) {
       analyzeAlerts$somelist = c(TRUE, "Please select two groups to compare.")  
       shiny::validate(need(input$levels, "Validate statement"))
@@ -388,17 +417,17 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         ClinData[,mainParameter] = fct_relevel(dplyr::pull(ClinData, mainParameter), contrastLevels)
       }
       if (length(covariates) == 0){
-        expDesign = model_matrix(ClinData, as.formula(paste("~0", mainParameter, sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~0", mainParameter, sep = "+", collapse = "+")))       
       } else {
-        expDesign = model_matrix(ClinData, as.formula(paste("~0", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~0", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
       }
     }
     # Prep experimental design for first parameter being cont.     
     if (input$ContinChoice_gsea == TRUE){
       if (length(covariates) == 0){
-        expDesign = model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, sep = "+", collapse = "+")))       
       } else {
-        expDesign = model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
+        expDesign = modelr::model_matrix(ClinData, as.formula(paste("~ 1", mainParameter, paste(covariates, sep = "+", collapse = "+"), sep = "+", collapse = "+")))       
       }
     }
     
@@ -409,7 +438,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     
     #observeEvent(input$analyzeLimma ,{
-    req(ClinDomit$designMatrix)
+    shiny::req(ClinDomit$designMatrix)
     if (!is.null(need(sum(ClinDomit$designMatrix[,1])>=3, "TRUE"))) {
       analyzeAlerts$somelist = c(TRUE, "The experimental design does not contain three or more samples to test on.")  
     }
@@ -478,13 +507,14 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     reportBlocks$volcano_plot = 
       ggplot(data=gene_list, aes(x=logFC, y=-log10(P.Value) , colour=threshold)) +
-      #ggtitle(paste(Factor,": ", names(ClinDomit$designMatrix)[2]," vs ", names(ClinDomit$designMatrix[1]), Filnames, collapse = "")) +
+      ggtitle("Volcano plot") +
       geom_point(shape=20, data = gene_list, aes(text= rownames(gene_list)), size = 1, alpha = 0.4) +
       #labs(color = paste("Threshold \n adj.p < ", input$adj.P.Val, " and \n log2FC +/- ", input$logFC)) +
       theme(plot.title = element_text(hjust = 0.5, face = "bold")) + 
       scale_color_tableau() +
       theme_light() +
-      theme(legend.title = element_blank())
+      #theme(legend.title = element_blank()) +
+      guides(color = guide_legend(title="Significant"))
     
   })
   
@@ -509,26 +539,28 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     limmaResult$df_down<-limmaResult$down %>% tibble::rownames_to_column("Gene.name")
     
     
-    reportBlocks$volcano_plot <- limma_input()
+    temp_volcano = limma_input()
     
     #Prepare interactive plot, reactive title and legend
     
     if (!is.null(input$expandFilter_gsea) && input$expandFilter_gsea == TRUE) {
-      Filnames = paste(" only ", input$filter_levels[1], collapse= "")
+      Filnames = paste(" only ", input$filter_levels, collapse= "")
     } else {
       Filnames = ""
     }
     
     input$analyzeLimma 
-    isolate(
+    shiny::isolate(
       if (input$ContinChoice_gsea == FALSE){
         title_begin = paste("Gene sets changed in ", names(ClinDomit$designMatrix)[1], 
                             " when compared to ", 
                             names(ClinDomit$designMatrix[2]), 
-                            Filnames, collapse = "")
+                             collapse = "")
       } else {
         title_begin =  paste("Gene sets regulated with regard to ", names(ClinDomit$designMatrix)[2], Filnames, collapse = "")
       })
+    reportBlocks$volcano_title = title_begin
+    reportBlocks$volcano_plot = temp_volcano + labs(subtitle = title_begin)
     
     pp <- plotly::ggplotly(reportBlocks$volcano_plot, tooltip = "text") %>% 
       plotly::layout(title = paste0('Volcano plot',
@@ -575,6 +607,19 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
   })
   
+  output$downloadboxscatter_up <- shiny::downloadHandler(
+    filename = "BoxScatter.pdf",
+    content = function(file) {
+      plot_parameters = callModule(downloadObj, id = ns("boxscatter_up"), title = "View on individual gene set enrichment scores", filename = "BoxScatter.pdf")
+      if(!is.null(reportBlocks$boxPlotUp)) {
+        reportBlocks$boxPlotUp = add_plot_info(reportBlocks$boxPlotUp, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$boxPlotUp, device = "pdf", dpi = "print")
+      } else {
+        reportBlocks$scatterPlotUp = add_plot_info(reportBlocks$scatterPlotUp, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$scatterPlotUp, device = "pdf", dpi = "print")
+      }
+    })
+  
   output$boxPlotDown <- renderPlot({
     validate(need(input$down_rows_selected, FALSE))
     original = proteinAbundance$original %>% column_to_rownames("Gene names") %>% as.data.frame()
@@ -596,6 +641,19 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
       return(reportBlocks$scatterPlotDown)
     }
   })
+  
+  output$downloadboxscatter_do <- shiny::downloadHandler(
+    filename = "BoxScatter.pdf",
+    content = function(file) {
+      plot_parameters = callModule(downloadObj, id = ns("boxscatter_do"), title = "View on individual gene set enrichment scores", filename = "BoxScatter.pdf")
+      if(!is.null(reportBlocks$boxPlotDown)) {
+        reportBlocks$boxPlotDown = add_plot_info(reportBlocks$boxPlotDown, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$boxPlotDown, device = "pdf", dpi = "print")
+      } else {
+        reportBlocks$scatterPlotDown = add_plot_info(reportBlocks$scatterPlotDown, plot_parameters)
+        ggsave(filename = file, plot = reportBlocks$scatterPlotDown, device = "pdf", dpi = "print")
+      }
+    })
   
   createLineScatterPlot <- function(rows_selected, proteinData, CD_clean, GR_fatcor, limmaResult, labelColBox){
     s_up = rows_selected
@@ -633,7 +691,7 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     scatterPlot = ggplot(PD, aes(x = get(GR_fatcor), y = `log2 of LFQ value`)) + 
       geom_point(aes(x = get(GR_fatcor), y = `log2 of LFQ value`, colour = groups)) + 
       geom_smooth(method = "lm") +
-      labs(x = paste(GR_fatcor)) +
+      labs(x = paste(GR_fatcor), y = "Enrichment score") +
       facet_wrap(~`Gene name`) +
       theme_light()
     if (input$showLabels == TRUE) {
@@ -677,10 +735,10 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     }
     
     BoxPlot = ggplot(PD, aes(x = get(GR_fatcor), y = `Enrichment score`)) + 
-      geom_boxplot() +
+      geom_boxplot(outlier.size = -1) +
       geom_jitter(aes(colour = color)) +
       #geom_text_repel(aes(label=labels), show.legend = F, size = 4) +
-      labs(x = paste(GR_fatcor)) +
+      labs(x = paste(GR_fatcor), y = "Enrichment score") +
       facet_wrap(~`Gene set`) +
       theme_light()
     
@@ -735,11 +793,6 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
                "Downregulated.Proteins" = limmaResult$df_down,
                "Limma.ExpDesign" = ClinDomit$designMatrix %>% rownames_to_column("PatientID"),
                "Limma.Setup.Details" = data.frame("imputed Data" = input$imputeForLimma, "eBayesTrend" = "TRUE", "Contrast" = paste(names(ClinDomit$designMatrix)[1]," regulated when compared to ", names(ClinDomit$designMatrix[2])))
-               #,
-              # "Upregulated.GeneSets" = gsea_regul$df_up,
-              # "Downregulated.GeneSets" = gsea_regul$df_down,
-              # "Differential.GSEA.Setup" = reportBlocks$gseaSetup, 
-              # "ProteinIDs_Gene_Mapping" = reportBlocks$ProteinIDMap
                )
       openxlsx::write.xlsx(x, file, row.names = FALSE)
       dev.off()
@@ -765,7 +818,12 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
         boxPlotDown = reportBlocks$boxPlotDown,
       #  ExpSetup = reportBlocks$ExpSetup,
         UpRegul = limmaResult$df_up,
-        DoRegul = limmaResult$df_down
+        DoRegul = limmaResult$df_down,
+      expDesign = ClinDomit$designMatrix,
+      covariates = reportBlocks$covariates,
+      filter = input$filter_levels,
+      volcano_title = reportBlocks$volcano_title,  
+      ssGSEA_collection = reportData$ssGSEA_collection
       )
       
       # Knit the document, passing in the `params` list, and eval it in a
@@ -788,17 +846,12 @@ expDesignModule <- function(input, output, session, ssgsea_data_update = NULL, s
     
     reportBlocks$ExpSetup <- 
       HTML(markdownToHTML(fragment.only=TRUE, text=c( 
-        #"* Input MaxQuant File:",protfile$name,
-        #"* Input Clinicaldata File:",clinfile$name$name,
-        "* Clinical grouping factor:", input$GR_fatcor_gsea,
-        "* Filter/stratification on:", input$filter_GR_fatcor,
-        "* Two groups to compare:", reportBlocks$contrastLevels[1],",", reportBlocks$contrastLevels[2],
-        "* The samples contributing to limma are:","total", nrow(ClinDomit$designMatrix),";",reportBlocks$contrastLevels[1],"(", sum(ClinDomit$designMatrix[1]),")","and", reportBlocks$contrastLevels[2],"(", sum(ClinDomit$designMatrix[2]),")", 
-        #kable_input,
+        "* Input gene set collection file:", reportData$ssGSEA_collection,
+        "* ", reportBlocks$volcano_title,
         scroll_box(kable_input,width = "70%", height = "200px"),
-        "* Total number of genes in limma are:",nrow(limmaResult$gene_list),
-        "* The number of genes **upregulated** and **downregulated** in ",reportBlocks$contrastLevels[1], " are ", nrow(limmaResult$up)," and " ,nrow(limmaResult$down), " respectively. ",
-        "* The threshold used to highlight significant genes is [BH corrected](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust) adjusted P value of" , input$adj.P.Val, "and absolute log fold change of ",input$logFC 
+        "* Total number of gene sets in differential enrichment calculation are:",nrow(limmaResult$gene_list),
+        "* The number of gene sets **upregulated** and **downregulated** in ",reportBlocks$contrastLevels[1], " are ", nrow(limmaResult$up)," and " ,nrow(limmaResult$down), " respectively. ",
+        "* The threshold used to highlight significant genes is [BH corrected](https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/p.adjust) adjusted P value of" , input$adj.P.Val, "and absolute enrichment score fold change of ",input$logFC 
         
       )))
     bsCollapsePanel(p("Detailed description",style = "color:#18bc9c"),

@@ -220,13 +220,14 @@ plot_StS_heatmap <- function(proteinAbundance, corr = FALSE){
     sampleDists <- stats::dist(t(proteinAbundance), method = "euclidean")
   }
   sampleDistMatrix <- as.matrix( sampleDists )
-  colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
-  pheatmap(sampleDistMatrix,
+  colors = grDevices::colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+  dummy = pheatmap::pheatmap(sampleDistMatrix,
            col = colors,
            main= "Sample to Sample Heatmap",
            legend=TRUE,
            fontsize_row = 8,
            fontsize_col= 8)
+  return(dummy$gtable)
 }
 
 plot_misValDens <- function(proteinAbundance){
@@ -246,7 +247,7 @@ plot_misValDens <- function(proteinAbundance){
     geom_density(alpha = 0.3) + 
     theme_light() + 
     ggthemes::scale_fill_tableau() +
-    ggtitle("Distribution of Intensity for origanal and missing values")
+    ggtitle("Distribution of intensity for original and missing values")
 }
 
 #' Cumulative intensities calculation and plot - Creates a diagram to show cumulative protein intensities over the whole range of detected

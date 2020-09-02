@@ -1,7 +1,7 @@
 downloadObjUI <- function(id, ...) {
   ns <- NS(id)
   tagList(
-    br(),
+    #br(),
     shinyBS::bsCollapsePanel(p("Customize figure text for download", style = "color:#18bc9c"),
 
   shiny::textInput(inputId = ns("title"), label = "Type a custom the plot title for download", value = "" ),
