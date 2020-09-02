@@ -127,7 +127,7 @@ ui <- shiny::fluidPage(
 
                                              shiny::tabPanel(title = "Distribution overview",
                                                              configurePlotColUI(id = "distr"),
-                                                             shiny::plotOutput("distributionPlot",height = 800) ,
+                                                             shiny::plotOutput("distributionPlot", height = 800) ,
                                                              br(),
                                                              shiny::downloadButton('downloadDistributionPlot', 'Save'),
                                                              br(),
@@ -146,7 +146,8 @@ ui <- shiny::fluidPage(
                                                                       label = "Select the (dis-)similarity metric",
                                                                       choices = list("Pearson" = "Pearson", "Euclidean" = "Euclidean")
                                                        ),
-                                                       shiny::plotOutput("StS_heatmap", height = 600),
+                                                       shiny::plotOutput("StS_heatmap", height = 600
+                                                                         ),
                                                        br(),
                                                        shiny::downloadButton('downloadStS_heatmap', 'Save'),
                                                        br(),
@@ -627,9 +628,10 @@ server <- function(input, output, session) {
       content = function(file) {
         plot_parameters = callModule(downloadObj, id = "pca", title = "Principal component analysis", filename = "pca.pdf")
         QCreport$pca = add_plot_info(QCreport$pca, plot_parameters)
-        grDevices::pdf(file)
-        print(QCreport$pca)
-        grDevices::dev.off()
+        #grDevices::pdf(file)
+        #print(QCreport$pca)
+        #grDevices::dev.off()
+        ggsave(filename = file, plot = QCreport$pca, device = "pdf", dpi = "print")
     })
 
     #Distribution plot
@@ -654,11 +656,12 @@ server <- function(input, output, session) {
     output$downloadDistributionPlot <- shiny::downloadHandler(
       filename = "DistributionPlot.pdf",
       content = function(file) {
-        plot_parameters = callModule(downloadObj, id = "distr", title = "Distribution of proetin intensities", filename = "DistributionPlot.pdf")
+        plot_parameters = callModule(downloadObj, id = "distr", title = "Distribution of protein intensities", filename = "DistributionPlot.pdf")
         QCreport$distributionPlot = add_plot_info(QCreport$distributionPlot, plot_parameters)
-        grDevices::pdf(file)
-        print(QCreport$distributionPlot)
-        grDevices::dev.off()
+        #grDevices::pdf(file)
+        #print(QCreport$distributionPlot)
+        #grDevices::dev.off()
+        ggsave(filename = file, plot = QCreport$distributionPlot, device = "pdf", dpi = "print")
       })
 
     
@@ -685,36 +688,39 @@ server <- function(input, output, session) {
       content = function(file) {
         plot_parameters = callModule(downloadObj, id = "coverage", title = "Measured proteins per sample", filename = "ProteinNumbers.pdf")
         QCreport$number = add_plot_info(QCreport$number, plot_parameters)
-        grDevices::pdf(file)
-        print(QCreport$number)
-        grDevices::dev.off()
+        #grDevices::pdf(file)
+        #print(QCreport$number)
+        #grDevices::dev.off()
+        ggsave(filename = file, plot = QCreport$number, device = "pdf", dpi = "print")
       })
 
     #Sample-to-Sample Heatmap
-    StSheatmap_input <- shiny::reactive({
+   # StSheatmap_input <- shiny::reactive({
+  #    
+   # })
+    
+    output$StS_heatmap <- shiny::renderPlot({
       log2tansform(TRUE)
       original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
       if (input$distanceMetric == "Pearson") {
         corr = TRUE
       } else {corr = FALSE}
-      
-      plot_StS_heatmap(original, corr = corr)
+      browser()
+      QCreport$StSheatmap = plot_StS_heatmap(original, corr = corr)
+      QCreport$StSDistMetric = input$distanceMetric
+      QCreport$StSheatmap
     })
     
-    output$StS_heatmap <- shiny::renderPlot({
-      QCreport$StSDistMetric = input$distanceMetric
-      QCreport$StSheatmap <- StSheatmap_input()
-      StSheatmap_input()
-    })
     output$downloadStS_heatmap <- shiny::downloadHandler(
       filename = "StS_heatmap.pdf",
       content = function(file) {
         plot_parameters = callModule(downloadObj, id = "sts_hm", title = "Sample to sample heatmap", filename = "StS_heatmap.pdf")
         QCreport$StSheatmap = add_plot_info(QCreport$StSheatmap, plot_parameters)
-        grDevices::pdf(file)
-        print(QCreport$StSheatmap)
-        print(QCreport$StSDistMetric)
-        grDevices::dev.off()
+        #grDevices::pdf(file)
+        #print(QCreport$StSheatmap)
+        #print(QCreport$StSDistMetric)
+        #grDevices::dev.off()
+        ggsave(filename = file, plot = QCreport$StSheatmap, device = "pdf", dpi = "print")
       })
     
     # Missing values density
@@ -724,17 +730,17 @@ server <- function(input, output, session) {
       QCreport$misVal
     })
     
-    output$downloadNumbers <- downloadHandler(
+    output$downloadmisVal <- downloadHandler(
       filename = "MisValDensity.pdf",
       content = function(file) {
-        plot_parameters = callModule(downloadObj, id = "misVal", title = "Distribution of Intensity for origanal and missing values", filename = "MisValDensity.pdf")
-        QCreport$number = add_plot_info(QCreport$misVal, plot_parameters)
-        grDevices::pdf(file)
-        print(QCreport$misVal)
-        grDevices::dev.off()
+        plot_parameters = callModule(downloadObj, id = "misVal", title = "Distribution of intensity for original and missing values", filename = "MisValDensity.pdf")
+        QCreport$misVal = add_plot_info(QCreport$misVal, plot_parameters)
+        ggsave(filename = file, plot = QCreport$misVal, device = "pdf", dpi = "print")
       })
     
-    
+    #grDevices::pdf(file)
+    #print(QCreport$misVal)
+    #grDevices::dev.off()
     
     # Cumulative Intensities 
     output$CumSumPlot <- shiny::renderPlot({
@@ -775,10 +781,11 @@ server <- function(input, output, session) {
         plot_parameters = callModule(downloadObj, id = "cumsum_int", title = "Cumulative protein intensities", filename = "CumSumPlot.pdf")
         original = proteinAbundance$original %>% tibble::column_to_rownames("Gene names") %>% as.data.frame()
         QCreport$cumsum = add_plot_info(CumSumIntensities(original)[[1]], plot_parameters)
-        grDevices::pdf(file)
-        print(QCreport$cumsum)
-        print(CumSumIntensities(original)[[2]])
-        grDevices::dev.off()
+       # grDevices::pdf(file)
+        #print(QCreport$cumsum)
+        #print(CumSumIntensities(original)[[2]])
+        #grDevices::dev.off()
+        ggsave(filename = file, plot = QCreport$cumsum, device = "pdf", dpi = "print")
       }
     )
   })  
