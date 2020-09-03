@@ -970,8 +970,7 @@ server <- function(input, output, session) {
     }
 
       #shiny::validate(
-      #  need(input$ClinD != "", "Please provide a sample description file for upload on the previous tab.")
-        #need(input$demo_clin_data != "", "Please select a file for upload or choose to use the database connection.")
+        #need(input$demo_clin_data != "", "Please select a file for upload.")
     #  )
       #clinfile$name <- input$ClinD
     #clinfile$name <-parseFilePaths(volumes2, input$demo_clin_data)
@@ -1575,10 +1574,9 @@ server <- function(input, output, session) {
                "ProteinIDs.Gene.Mapping" = reportBlocks$ProteinIDMap,
                "Raw.data.incl.imputed.values" = proteinAbundance$imputed)
       openxlsx::write.xlsx(x, file, row.names = FALSE)
-      grDevices::dev.off()
     }
   )
-  
+  # grDevices::dev.off()  
   
   output$doc1 <- shiny::renderUI({
     req(ClinDomit$designMatrix, limmaResult$gene_list)
