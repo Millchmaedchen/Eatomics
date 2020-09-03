@@ -213,7 +213,7 @@ plot_proteinCoverage <- function (proteinAbundance, dummy = NULL) {
 #' @return
 #' @export
 #' 
-plot_StS_heatmap <- function(proteinAbundance, corr = FALSE){
+plot_StS_heatmap <- function(proteinAbundance, corr = FALSE, title = "Sample to Sample Heatmap"){
   if (corr == TRUE) {
     sampleDists = cor(proteinAbundance, use = "pairwise.complete.obs")
   } else {
@@ -223,11 +223,11 @@ plot_StS_heatmap <- function(proteinAbundance, corr = FALSE){
   colors = grDevices::colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
   dummy = pheatmap::pheatmap(sampleDistMatrix,
            col = colors,
-           main= "Sample to Sample Heatmap",
+           main= title,
            legend=TRUE,
            fontsize_row = 8,
            fontsize_col= 8)
-  return(dummy$gtable)
+  return(dummy)
 }
 
 plot_misValDens <- function(proteinAbundance){

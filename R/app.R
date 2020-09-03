@@ -149,7 +149,9 @@ ui <- shiny::fluidPage(
                                                        shiny::plotOutput("StS_heatmap", height = 600
                                                                          ),
                                                        br(),
-                                                       downloadObjUI(id = "sts_hm"),
+                                                       shinyBS::bsCollapsePanel(p("Customize figure text for download", style = "color:#18bc9c"),
+                                                       shiny::textInput(inputId = "sts_title", label = "Type a custom the plot title for download", value = "" )),
+                                                      # downloadObjUI(id = "sts_hm"),
                                                        shiny::downloadButton('downloadStS_heatmap', 'Save')
 
                                               ),
@@ -716,7 +718,7 @@ server <- function(input, output, session) {
       if (input$distanceMetric == "Pearson") {
         corr = TRUE
       } else {corr = FALSE}
-      QCreport$StSheatmap = plot_StS_heatmap(original, corr = corr)
+      QCreport$StSheatmap = plot_StS_heatmap(original, corr = corr, title = input$sts_title)
       QCreport$StSDistMetric = input$distanceMetric
       QCreport$StSheatmap
     })
@@ -724,8 +726,8 @@ server <- function(input, output, session) {
     output$downloadStS_heatmap <- shiny::downloadHandler(
       filename = "StS_heatmap.pdf",
       content = function(file) {
-        plot_parameters = callModule(downloadObj, id = "sts_hm", title = "Sample to sample heatmap", filename = "StS_heatmap.pdf")
-        QCreport$StSheatmap = add_plot_info(QCreport$StSheatmap, plot_parameters)
+        #plot_parameters = callModule(downloadObj, id = "sts_hm", title = "Sample to sample heatmap", filename = "StS_heatmap.pdf")
+        #QCreport$StSheatmap = add_plot_info(QCreport$StSheatmap, plot_parameters)
         #grDevices::pdf(file)
         #print(QCreport$StSheatmap)
         #print(QCreport$StSDistMetric)
